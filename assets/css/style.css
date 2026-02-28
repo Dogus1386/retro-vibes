@@ -1,0 +1,83 @@
+/* Reset básico: quita estilos raros por defecto del navegador */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #0b0b10;
+  color: #f2f2f2;
+  line-height: 1.5;
+}
+
+.site-header {
+  padding: 24px;
+  text-align: center;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.container {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: #151524;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.game-list {
+  margin-top: 12px;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.game-list li {
+  padding: 12px;
+  background: #0f0f18;
+  border: 1px solid #2a2a3a;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.actions input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #2a2a3a;
+  background: #0f0f18;
+  color: #f2f2f2;
+}
+
+.actions button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #2a2a3a;
+  background: #22223a;
+  color: #f2f2f2;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: #2d2d52;
+}
+
+.site-footer {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.8;
+}

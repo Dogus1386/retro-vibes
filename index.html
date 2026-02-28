@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retro Vibes - Videojuegos Retro</title>
+
+  <!-- Conexión HTML -> CSS -->
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <h1>Retro Vibes</h1>
+    <p>Videojuegos retro, nostalgia y pixel art ✨</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Top Retro (demo)</h2>
+
+      <ul id="gameList" class="game-list">
+        <!-- JS va a insertar items aquí -->
+      </ul>
+
+      <div class="actions">
+        <input id="gameInput" type="text" placeholder="Ej: Super Mario Bros" />
+        <button id="addBtn">Agregar</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <small>© 2026 Retro Vibes</small>
+  </footer>
+
+  <!-- Conexión HTML -> JS (se pone al final para que cargue el HTML primero) -->
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
