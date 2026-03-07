@@ -3,38 +3,107 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retro Vibes - Videojuegos Retro</title>
-
-  <!-- Conexión HTML -> CSS -->
+  <title>Retro Vibes | Blog de videojuegos retro</title>
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
-
 <body>
   <header class="site-header">
-    <h1>Retro Vibes</h1>
-    <p>Videojuegos retro, nostalgia y pixel art ✨</p>
+    <div class="container header-content">
+      <div class="logo">
+        <span class="logo-icon">🕹️</span>
+        <h1>Retro Vibes</h1>
+      </div>
+
+      <nav class="main-nav">
+        <a href="#inicio">Inicio</a>
+        <a href="#iconicos">Juegos Icónicos</a>
+        <a href="#articulos">Artículos</a>
+        <a href="#comunidad">Comunidad</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="container">
-    <section class="card">
-      <h2>Top Retro (demo)</h2>
+  <main>
+    <section class="hero" id="inicio">
+      <div class="container hero-content">
+        <p class="tagline">Nostalgia, pixeles y grandes recuerdos</p>
+        <h2>Un rincón para quienes crecieron entre consolas, arcade y juegos inolvidables.</h2>
+        <p class="hero-text">
+          Retro Vibes es un espacio para recordar clásicos, compartir experiencias
+          y mantener viva la pasión por los videojuegos retro.
+        </p>
+        <button id="welcomeBtn" class="primary-btn">Entrar al mundo retro</button>
+      </div>
+    </section>
 
-      <ul id="gameList" class="game-list">
-        <!-- JS va a insertar items aquí -->
-      </ul>
+    <section class="featured-games" id="iconicos">
+      <div class="container">
+        <h2 class="section-title">Juegos Icónicos</h2>
+        <div class="cards-grid">
+          <article class="card">
+            <h3>Super Mario Bros</h3>
+            <p>El clásico que marcó generaciones y convirtió cada nivel en una aventura inolvidable.</p>
+          </article>
 
-      <div class="actions">
-        <input id="gameInput" type="text" placeholder="Ej: Super Mario Bros" />
-        <button id="addBtn">Agregar</button>
+          <article class="card">
+            <h3>Contra</h3>
+            <p>Acción intensa, cooperación y dificultad legendaria en uno de los juegos más recordados.</p>
+          </article>
+
+          <article class="card">
+            <h3>Street Fighter II</h3>
+            <p>El rey de las peleas arcade, responsable de tardes enteras frente a la máquina.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="latest-posts" id="articulos">
+      <div class="container">
+        <h2 class="section-title">Últimos Artículos</h2>
+        <div class="posts-grid">
+          <article class="post-card">
+            <span class="post-category">Arcade</span>
+            <h3>Por qué Contra sigue siendo brutal</h3>
+            <p>Un vistazo a su dificultad, ritmo y la emoción de jugar en cooperativo.</p>
+            <a href="#" class="read-more">Leer más</a>
+          </article>
+
+          <article class="post-card">
+            <span class="post-category">Nintendo</span>
+            <h3>Super Mario Bros y el inicio de una era</h3>
+            <p>Cómo un juego aparentemente simple cambió para siempre la historia de los videojuegos.</p>
+            <a href="#" class="read-more">Leer más</a>
+          </article>
+
+          <article class="post-card">
+            <span class="post-category">Fight Games</span>
+            <h3>Street Fighter II y las retas inolvidables</h3>
+            <p>Cuando perder una pelea significaba pedir revancha y seguir jugando una vez más.</p>
+            <a href="#" class="read-more">Leer más</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="community" id="comunidad">
+      <div class="container community-box">
+        <h2>Comunidad Retro</h2>
+        <p>
+          Muy pronto podrás compartir tus recuerdos, comentar tus juegos favoritos
+          y contar esas historias que solo los gamers retro entienden.
+        </p>
+        <button id="communityBtn" class="secondary-btn">Quiero participar</button>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <small>© 2026 Retro Vibes</small>
+    <div class="container">
+      <p>© <span id="year"></span> Retro Vibes - Blog de videojuegos retro</p>
+    </div>
   </footer>
 
-  <!-- Conexión HTML -> JS (se pone al final para que cargue el HTML primero) -->
   <script src="assets/js/app.js"></script>
 </body>
 </html>
