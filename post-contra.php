@@ -50,7 +50,8 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <a href="index.html">Inicio</a>
         <a href="index.html#iconicos">Juegos Icónicos</a>
         <a href="blog.html">Blog</a>
-        <a href="index.html#comunidad">Comunidad</a>
+        <a href="index.html">Comunidad</a>
+        
       </nav>
     </div>
   </header>
