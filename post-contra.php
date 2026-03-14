@@ -1,3 +1,30 @@
+
+<?php
+require_once "db.php";
+
+$postSlug = "contra";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $authorName = trim($_POST["author_name"] ?? "");
+    $commentText = trim($_POST["comment_text"] ?? "");
+
+    if ($authorName !== "" && $commentText !== "") {
+        $stmt = $pdo->prepare("INSERT INTO comments (post_slug, author_name, comment_text) VALUES (?, ?, ?)");
+        $stmt->execute([$postSlug, $authorName, $commentText]);
+    }
+
+    header("Location: post-contra.php");
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT author_name, comment_text, created_at FROM comments WHERE post_slug = ? ORDER BY id DESC");
+$stmt->execute([$postSlug]);
+$comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -158,6 +185,98 @@
           </div>
         </aside>
       </div>
+
+      <div class="post-navigation">
+
+    <a href="post-metalslug.html" class="nav-post prev">
+        ← Artículo anterior
+        <span>Metal Slug y el arte del caos</span>
+    </a>
+
+    <a href="post-mario.html" class="nav-post next">
+        Artículo siguiente →
+        <span>Super Mario Bros y el inicio de una era</span>
+    </a>
+
+</div>
+
+
+      <!-- ARTICULOS RELACIONADOS -->
+<section class="related-posts">
+
+    <h2>Artículos relacionados</h2>
+
+    <div class="related-grid">
+
+        <a href="post-mario.html" class="related-card">
+            <span class="tag">Nintendo</span>
+            <h3>Super Mario Bros y el inicio de una era</h3>
+        </a>
+
+        <a href="post-streetfighter.html" class="related-card">
+            <span class="tag">Fight Games</span>
+            <h3>Street Fighter II y las retas inolvidables</h3>
+        </a>
+
+        <a href="post-metalslug.html" class="related-card">
+            <span class="tag">Run and Gun</span>
+            <h3>Metal Slug y el arte del caos</h3>
+        </a>
+
+    </div>
+
+</section>
+
+<section class="comments-section">
+  <h2>Comentarios retro</h2>
+
+  <form method="POST" action="" class="comment-form">
+    <div class="form-group">
+      <label for="commentName">Nombre</label>
+      <input type="text" id="commentName" name="author_name" placeholder="Ej: Julio" required>
+    </div>
+
+    <div class="form-group">
+      <label for="commentText">Tu comentario</label>
+      <textarea id="commentText" name="comment_text" rows="5" placeholder="Comparte tu recuerdo sobre Contra..." required></textarea>
+    </div>
+
+    <button type="submit" class="primary-btn">Publicar comentario</button>
+  </form>
+
+ <div class="comments-list">
+  <?php if (count($comments) > 0): ?>
+    <?php foreach ($comments as $comment): ?>
+      <div class="comment-card">
+        <div class="comment-header">
+          <div class="comment-avatar">
+            <?php echo strtoupper(substr($comment["author_name"], 0, 1)); ?>
+          </div>
+
+          <div class="comment-meta">
+            <h4><?php echo htmlspecialchars($comment["author_name"]); ?></h4>
+            <span><?php echo htmlspecialchars($comment["created_at"]); ?></span>
+          </div>
+        </div>
+
+        <p><?php echo nl2br(htmlspecialchars($comment["comment_text"])); ?></p>
+      </div>
+    <?php endforeach; ?>
+  <?php else: ?>
+    <p class="empty-comments">Aún no hay comentarios. Sé el primero en compartir tu recuerdo retro.</p>
+  <?php endif; ?>
+</div>
+
+
+
+
+
+</section>
+
+
+
+
+
     </section>
   </main>
 
@@ -170,3 +289,4 @@
   <script src="assets/js/app.js"></script>
 </body>
 </html>
+
