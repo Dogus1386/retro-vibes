@@ -1,30 +1,41 @@
-
 <?php
-require_once "db.php";
+session_start();
+require 'db.php';
 
-$postSlug = "contra";
+$post_slug = 'contra';
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $authorName = trim($_POST["author_name"] ?? "");
-    $commentText = trim($_POST["comment_text"] ?? "");
+/* GUARDAR COMENTARIO */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
+    $comment_text = trim($_POST['comment_text'] ?? '');
+    $author_name = $_SESSION['user_nombre'];
+    $usuario_id = $_SESSION['user_id'];
 
-    if ($authorName !== "" && $commentText !== "") {
-        $stmt = $pdo->prepare("INSERT INTO comments (post_slug, author_name, comment_text) VALUES (?, ?, ?)");
-        $stmt->execute([$postSlug, $authorName, $commentText]);
+    if ($comment_text !== '') {
+        if (mb_strlen($comment_text) > 500) {
+            die('El comentario no puede superar los 500 caracteres.');
+        }
+
+        $stmt = $pdo->prepare("
+            INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id)
+            VALUES (?, ?, ?, NOW(), ?)
+        ");
+        $stmt->execute([$post_slug, $author_name, $comment_text, $usuario_id]);
+
+        header("Location: post-contra.php");
+        exit;
     }
-
-    header("Location: post-contra.php");
-    exit;
 }
 
-$stmt = $pdo->prepare("SELECT author_name, comment_text, created_at FROM comments WHERE post_slug = ? ORDER BY id DESC");
-$stmt->execute([$postSlug]);
+/* CARGAR COMENTARIOS SOLO DE CONTRA */
+$stmt = $pdo->prepare("
+    SELECT author_name, comment_text, created_at
+    FROM comments
+    WHERE post_slug = ?
+    ORDER BY id DESC
+");
+$stmt->execute([$post_slug]);
 $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
-
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -47,11 +58,17 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </div>
 
       <nav class="main-nav">
-        <a href="index.html">Inicio</a>
-        <a href="index.html#iconicos">Juegos Icónicos</a>
-        <a href="blog.html">Blog</a>
-        <a href="index.html">Comunidad</a>
-        
+        <a href="index.php">Inicio</a>
+        <a href="index.php#iconicos">Juegos Icónicos</a>
+        <a href="blog.php">Blog</a>
+        <a href="index.php#comunidad">Comunidad</a>
+
+        <?php if (isset($_SESSION['user_nombre'])): ?>
+          <span style="margin-left:20px;">👤 <?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+          <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+        <?php else: ?>
+          <a href="login.php" style="margin-left:20px;">Login</a>
+        <?php endif; ?>
       </nav>
     </div>
   </header>
@@ -60,12 +77,13 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <section class="post-hero">
       <div class="container post-hero-content">
         <nav class="breadcrumb">
-  <a href="index.html">Inicio</a>
-  <span>/</span>
-  <a href="blog.html">Blog</a>
-  <span>/</span>
-  <span class="breadcrumb-current">Contra</span>
-</nav>
+          <a href="index.php">Inicio</a>
+          <span>/</span>
+          <a href="blog.php">Blog</a>
+          <span>/</span>
+          <span class="breadcrumb-current">Contra</span>
+        </nav>
+
         <span class="post-category">Arcade</span>
 
         <div class="post-meta">
@@ -89,10 +107,10 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <section class="post-content-section">
       <div class="container post-layout">
         <article class="post-content">
-            <div class="post-image">
-  <img src="assets/img/contra1.jpg" alt="Contra arcade juego clásico Konami">
-</div>
-        
+          <div class="post-image">
+            <img src="assets/img/contra1.jpg" alt="Contra arcade juego clásico Konami">
+          </div>
+
           <p>
             Hablar de Contra es hablar de una época en la que los videojuegos no
             perdonaban errores. Cada enemigo, cada salto y cada proyectil exigían
@@ -160,7 +178,7 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             fuerza.
           </p>
 
-          <a href="blog.html" class="back-link">← Volver al blog</a>
+          <a href="blog.php" class="back-link">← Volver al blog</a>
         </article>
 
         <aside class="post-sidebar">
@@ -188,96 +206,75 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </div>
 
       <div class="post-navigation">
+        <a href="post-mario.php" class="nav-post next">
+          Artículo siguiente →
+          <span>Super Mario Bros y el inicio de una era</span>
+        </a>
+      </div>
 
-    <a href="post-metalslug.html" class="nav-post prev">
-        ← Artículo anterior
-        <span>Metal Slug y el arte del caos</span>
-    </a>
+      <section class="related-posts">
+        <h2>Artículos relacionados</h2>
 
-    <a href="post-mario.html" class="nav-post next">
-        Artículo siguiente →
-        <span>Super Mario Bros y el inicio de una era</span>
-    </a>
-
-</div>
-
-
-      <!-- ARTICULOS RELACIONADOS -->
-<section class="related-posts">
-
-    <h2>Artículos relacionados</h2>
-
-    <div class="related-grid">
-
-        <a href="post-mario.html" class="related-card">
+        <div class="related-grid">
+          <a href="post-mario.php" class="related-card">
             <span class="tag">Nintendo</span>
             <h3>Super Mario Bros y el inicio de una era</h3>
-        </a>
+          </a>
 
-        <a href="post-streetfighter.html" class="related-card">
+          <a href="post-streetfighter.php" class="related-card">
             <span class="tag">Fight Games</span>
             <h3>Street Fighter II y las retas inolvidables</h3>
-        </a>
-
-        <a href="post-metalslug.html" class="related-card">
-            <span class="tag">Run and Gun</span>
-            <h3>Metal Slug y el arte del caos</h3>
-        </a>
-
-    </div>
-
-</section>
-
-<section class="comments-section">
-  <h2>Comentarios retro</h2>
-
-  <form method="POST" action="" class="comment-form">
-    <div class="form-group">
-      <label for="commentName">Nombre</label>
-      <input type="text" id="commentName" name="author_name" placeholder="Ej: Julio" required>
-    </div>
-
-    <div class="form-group">
-      <label for="commentText">Tu comentario</label>
-      <textarea id="commentText" name="comment_text" rows="5" placeholder="Comparte tu recuerdo sobre Contra..." required></textarea>
-    </div>
-
-    <button type="submit" class="primary-btn">Publicar comentario</button>
-  </form>
-
- <div class="comments-list">
-  <?php if (count($comments) > 0): ?>
-    <?php foreach ($comments as $comment): ?>
-      <div class="comment-card">
-        <div class="comment-header">
-          <div class="comment-avatar">
-            <?php echo strtoupper(substr($comment["author_name"], 0, 1)); ?>
-          </div>
-
-          <div class="comment-meta">
-            <h4><?php echo htmlspecialchars($comment["author_name"]); ?></h4>
-            <span><?php echo htmlspecialchars($comment["created_at"]); ?></span>
-          </div>
+          </a>
         </div>
+      </section>
 
-        <p><?php echo nl2br(htmlspecialchars($comment["comment_text"])); ?></p>
-      </div>
-    <?php endforeach; ?>
-  <?php else: ?>
-    <p class="empty-comments">Aún no hay comentarios. Sé el primero en compartir tu recuerdo retro.</p>
-  <?php endif; ?>
-</div>
+      <section class="comments-section">
+        <h2>Comentarios retro</h2>
 
+        <?php if (isset($_SESSION['user_id'])): ?>
+          <form method="POST" action="" class="comment-form">
+            <div class="form-group">
+              <label for="commentText">Tu comentario</label>
+              <textarea
+                id="commentText"
+                name="comment_text"
+                maxlength="500"
+                placeholder="Comparte tu recuerdo sobre Contra..."
+                required
+              ></textarea>
+              <p id="contador">0 / 500</p>
+            </div>
 
+            <button type="submit" class="primary-btn">Publicar comentario</button>
+          </form>
+        <?php else: ?>
+          <p>Debes iniciar sesión para comentar.</p>
+          <p><a href="login.php">Iniciar sesión</a> o <a href="registro.php">registrarte</a></p>
+        <?php endif; ?>
 
+        <div class="comments-list">
+          <?php if (count($comments) > 0): ?>
+            <?php foreach ($comments as $comment): ?>
+              <div class="comment-card">
+                <div class="comment-header">
+                  <div class="comment-avatar">
+                    <?php echo strtoupper(substr($comment["author_name"], 0, 1)); ?>
+                  </div>
 
+                  <div class="comment-meta">
+                    <h4><?php echo htmlspecialchars($comment["author_name"]); ?></h4>
+                    <span><?php echo htmlspecialchars($comment["created_at"]); ?></span>
+                  </div>
+                </div>
 
-</section>
-
-
-
-
-
+                <p><?php echo nl2br(htmlspecialchars($comment["comment_text"])); ?></p>
+              </div>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <p class="empty-comments">Aún no hay comentarios. Sé el primero en compartir tu recuerdo retro.</p>
+          <?php endif; ?>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -290,4 +287,3 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <script src="assets/js/app.js"></script>
 </body>
 </html>
-

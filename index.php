@@ -1,3 +1,12 @@
+
+<?php
+session_start();
+?>
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="es">
   <head>
@@ -26,8 +35,18 @@
         <a href="#articulos">Artículos</a>
         <a href="#comunidad">Comunidad</a>
         <a href="blog.html">Blog</a>
+        <?php if(isset($_SESSION['user_nombre'])): ?>
+    <span style="margin-left:20px;">👤 <?php echo $_SESSION['user_nombre']; ?></span>
+    <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+<?php else: ?>
+    <a href="login.php" style="margin-left:20px;">Login</a>
+<?php endif; ?>
+
+
+
       </nav>
     </div>
+
   </header>
 
   <main>
@@ -39,7 +58,9 @@
           Retro Vibes es un espacio para recordar clásicos, compartir experiencias
           y mantener viva la pasión por los videojuegos retro.
         </p>
-        <button id="welcomeBtn" class="primary-btn">Entrar al mundo retro</button>
+       
+        <a href="login.php" class="primary-btn">Entrar al mundo retro</a>
+      
       </div>
     </section>
 
@@ -137,8 +158,11 @@
         <p>
           Muy pronto podrás compartir tus recuerdos, comentar tus juegos favoritos
           y contar esas historias que solo los gamers retro entienden.
+          
         </p>
-        <button id="communityBtn" class="secondary-btn">Quiero participar</button>
+        
+        <a href="login.php" class="secondary-btn">Quiero participar</a>
+
       </div>
     </section>
   </main>

@@ -133,7 +133,7 @@ body {
 
 .primary-btn,
 .secondary-btn {
-  padding: 15px 28px;
+  padding: 5px 20px;
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -160,7 +160,7 @@ body {
 }
 
 .secondary-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 0 20px rgba(0, 229, 255, 0.55);
 }
 

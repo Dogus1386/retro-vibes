@@ -1,22 +1,38 @@
 <?php
+session_start();
 require_once "db.php";
 
 $postSlug = "mario";
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $authorName = trim($_POST["author_name"] ?? "");
+/* GUARDAR COMENTARIO */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_SESSION["user_id"])) {
     $commentText = trim($_POST["comment_text"] ?? "");
+    $authorName = $_SESSION["user_nombre"];
+    $usuarioId = $_SESSION["user_id"];
 
-    if ($authorName !== "" && $commentText !== "") {
-        $stmt = $pdo->prepare("INSERT INTO comments (post_slug, author_name, comment_text) VALUES (?, ?, ?)");
-        $stmt->execute([$postSlug, $authorName, $commentText]);
+    if ($commentText !== "") {
+        if (mb_strlen($commentText) > 500) {
+            die("El comentario no puede superar los 500 caracteres.");
+        }
+
+        $stmt = $pdo->prepare("
+            INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id)
+            VALUES (?, ?, ?, NOW(), ?)
+        ");
+        $stmt->execute([$postSlug, $authorName, $commentText, $usuarioId]);
+
+        header("Location: post-mario.php");
+        exit;
     }
-
-    header("Location: post-mario.php");
-    exit;
 }
 
-$stmt = $pdo->prepare("SELECT author_name, comment_text, created_at FROM comments WHERE post_slug = ? ORDER BY id DESC");
+/* CARGAR COMENTARIOS SOLO DE MARIO */
+$stmt = $pdo->prepare("
+    SELECT author_name, comment_text, created_at
+    FROM comments
+    WHERE post_slug = ?
+    ORDER BY id DESC
+");
 $stmt->execute([$postSlug]);
 $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -43,10 +59,17 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
       </div>
 
       <nav class="main-nav">
-        <a href="index.html">Inicio</a>
-        <a href="index.html#iconicos">Juegos Icónicos</a>
-        <a href="blog.html">Blog</a>
-        <a href="index.html">Comunidad</a>
+        <a href="index.php">Inicio</a>
+        <a href="index.php#iconicos">Juegos Icónicos</a>
+        <a href="blog.php">Blog</a>
+        <a href="index.php#comunidad">Comunidad</a>
+
+        <?php if (isset($_SESSION['user_nombre'])): ?>
+          <span style="margin-left:20px;">👤 <?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+          <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+        <?php else: ?>
+          <a href="login.php" style="margin-left:20px;">Login</a>
+        <?php endif; ?>
       </nav>
     </div>
   </header>
@@ -55,9 +78,9 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <section class="post-hero">
       <div class="container post-hero-content">
         <nav class="breadcrumb">
-          <a href="index.html">Inicio</a>
+          <a href="index.php">Inicio</a>
           <span>/</span>
-          <a href="blog.html">Blog</a>
+          <a href="blog.php">Blog</a>
           <span>/</span>
           <span class="breadcrumb-current">Super Mario Bros</span>
         </nav>
@@ -154,7 +177,7 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             industria de los videojuegos.
           </p>
 
-          <a href="blog.html" class="back-link">← Volver al blog</a>
+          <a href="blog.php" class="back-link">← Volver al blog</a>
         </article>
 
         <aside class="post-sidebar">
@@ -206,30 +229,32 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <span class="tag">Fight Games</span>
             <h3>Street Fighter II y las retas inolvidables</h3>
           </a>
-
-          <a href="post-metalslug.html" class="related-card">
-            <span class="tag">Run and Gun</span>
-            <h3>Metal Slug y el arte del caos</h3>
-          </a>
         </div>
       </section>
 
       <section class="comments-section">
         <h2>Comentarios retro</h2>
 
-        <form method="POST" action="" class="comment-form">
-          <div class="form-group">
-            <label for="commentName">Nombre</label>
-            <input type="text" id="commentName" name="author_name" placeholder="Ej: Julio" required>
-          </div>
+        <?php if (isset($_SESSION['user_id'])): ?>
+          <form method="POST" action="" class="comment-form">
+            <div class="form-group">
+              <label for="commentText">Tu comentario</label>
+              <textarea
+                id="commentText"
+                name="comment_text"
+                maxlength="500"
+                placeholder="Comparte tu recuerdo sobre Mario..."
+                required
+              ></textarea>
+              <p id="contador">0 / 500</p>
+            </div>
 
-          <div class="form-group">
-            <label for="commentText">Tu comentario</label>
-            <textarea id="commentText" name="comment_text" rows="5" placeholder="Comparte tu recuerdo sobre Mario..." required></textarea>
-          </div>
-
-          <button type="submit" class="primary-btn">Publicar comentario</button>
-        </form>
+            <button type="submit" class="primary-btn">Publicar comentario</button>
+          </form>
+        <?php else: ?>
+          <p>Debes iniciar sesión para comentar.</p>
+          <p><a href="login.php">Iniciar sesión</a> o <a href="registro.php">registrarte</a></p>
+        <?php endif; ?>
 
         <div class="comments-list">
           <?php if (count($comments) > 0): ?>

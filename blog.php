@@ -1,3 +1,12 @@
+
+
+
+<?php
+session_start();
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -20,10 +29,20 @@
       </div>
 
       <nav class="main-nav">
-        <a href="index.html">Inicio</a>
-        <a href="index.html#iconicos">Juegos Icónicos</a>
-        <a href="blog.html">Blog</a>
-        <a href="index.html#comunidad">Comunidad</a>
+        <a href="index.php">Inicio</a>
+        <a href="index.php#iconicos">Juegos Icónicos</a>
+        <a href="blog.php">Blog</a>
+        <a href="index.php">Comunidad</a>
+
+        <?php if(isset($_SESSION['user_nombre'])): ?>
+    <span style="margin-left:20px;">👤 <?php echo $_SESSION['user_nombre']; ?></span>
+    <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+<?php else: ?>
+    <a href="login.php" style="margin-left:20px;">Login</a>
+<?php endif; ?>
+
+
+
       </nav>
     </div>
   </header>
