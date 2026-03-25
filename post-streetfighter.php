@@ -1,11 +1,21 @@
 <?php
 session_start();
 require_once "db.php";
+require_once 'auth.php';
+
 
 $postSlug = "streetfighter";
 
 /* GUARDAR COMENTARIO */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_SESSION["user_id"])) {
+  if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+if (isset($_SESSION['status']) && $_SESSION['status'] === 'bloqueado') {
+    die('Tu cuenta está bloqueada y no puedes comentar.');
+}
     $commentText = trim($_POST["comment_text"] ?? "");
     $authorName = $_SESSION["user_nombre"];
     $usuarioId = $_SESSION["user_id"];

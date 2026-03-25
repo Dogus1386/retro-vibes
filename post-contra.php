@@ -1,11 +1,28 @@
 <?php
 session_start();
 require 'db.php';
+require_once 'auth.php';
+
 
 $post_slug = 'contra';
 
 /* GUARDAR COMENTARIO */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
+     if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit;
+}
+
+if (isset($_SESSION['status']) && $_SESSION['status'] === 'bloqueado') {
+    die('Tu cuenta está bloqueada y no puedes comentar.');
+}
+
+
+
+
+
+
     $comment_text = trim($_POST['comment_text'] ?? '');
     $author_name = $_SESSION['user_nombre'];
     $usuario_id = $_SESSION['user_id'];
@@ -28,10 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user_id'])) {
 
 /* CARGAR COMENTARIOS SOLO DE CONTRA */
 $stmt = $pdo->prepare("
-    SELECT author_name, comment_text, created_at
-    FROM comments
-    WHERE post_slug = ?
-    ORDER BY id DESC
+  SELECT * FROM comments WHERE post_slug = ? AND status = 'visible' ORDER BY id DESC
 ");
 $stmt->execute([$post_slug]);
 $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
