@@ -34,13 +34,17 @@ session_start();
         <a href="#iconicos">Juegos Icónicos</a>
         <a href="#articulos">Artículos</a>
         <a href="#comunidad">Comunidad</a>
-        <a href="blog.html">Blog</a>
-        <?php if(isset($_SESSION['user_nombre'])): ?>
-    <span style="margin-left:20px;">👤 <?php echo $_SESSION['user_nombre']; ?></span>
-    <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
-<?php else: ?>
-    <a href="login.php" style="margin-left:20px;">Login</a>
+        <a href="blog.php">Blog</a>
+        <?php if(isset($_SESSION['user_nombre']) ): ?>
+        <span style="margin-left:20px;">👤 <?php echo $_SESSION['user_nombre']; ?></span>
+        <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+        <?php else: ?>
+        <a href="login.php" style="margin-left:20px;">Login</a>
+        <?php endif; ?>
+        <?php if (isset($_SESSION["role"]) && $_SESSION["role"] === "admin"): ?>
+    <a href="admin.php">Panel Admin</a>
 <?php endif; ?>
+   
 
 
 
@@ -58,9 +62,14 @@ session_start();
           Retro Vibes es un espacio para recordar clásicos, compartir experiencias
           y mantener viva la pasión por los videojuegos retro.
         </p>
+
        
+        <?php if(!isset($_SESSION['user_nombre'])): ?>
+
+
         <a href="login.php" class="primary-btn">Entrar al mundo retro</a>
-      
+      <?php endif; ?>
+
       </div>
     </section>
 
@@ -160,8 +169,10 @@ session_start();
           y contar esas historias que solo los gamers retro entienden.
           
         </p>
-        
+        <?php if(!isset($_SESSION['user_nombre'])): ?>
         <a href="login.php" class="secondary-btn">Quiero participar</a>
+
+        <?php endif; ?>
 
       </div>
     </section>

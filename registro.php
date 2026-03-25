@@ -20,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (PDOException $e) {
             $mensaje = 'Ese correo ya existe o hubo un error.';
         }
+
+        header("Location: login.php");
+        exit;
     }
 }
 ?>
@@ -51,5 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button type="submit">Registrarme</button>
     </form>
+
 </body>
 </html>

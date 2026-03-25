@@ -11,13 +11,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') {
         $mensaje = 'Todos los campos son obligatorios.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, nombre, email, password, role FROM usuarios WHERE email = ?");
         $stmt->execute([$email]);
-        $usuario = $stmt->fetch();
+        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($usuario && password_verify($password, $usuario['password'])) {
             $_SESSION['user_id'] = $usuario['id'];
             $_SESSION['user_nombre'] = $usuario['nombre'];
+            $_SESSION['user_email'] = $usuario['email'];
+            $_SESSION['role'] = $usuario['role'];
 
             header('Location: index.php');
             exit;
@@ -38,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1>Iniciar sesión</h1>
 
     <?php if ($mensaje): ?>
-        <p><?php echo $mensaje; ?></p>
+        <p><?php echo htmlspecialchars($mensaje); ?></p>
     <?php endif; ?>
 
     <form method="POST" action="">
