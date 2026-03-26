@@ -72,23 +72,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $rutaBase = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
                 $enlace = $protocolo . '://' . $host . $rutaBase . '/reset_password.php?token=' . urlencode($tokenPlano);
 
-                // ====== CONTENIDO DEL CORREO ======
-                $asunto = 'Recuperación de contraseña - Retro Vibes';
 
-                $cuerpo = "Hola " . $usuario['nombre'] . ",\n\n";
-                $cuerpo .= "Recibimos una solicitud para restablecer tu contraseña en Retro Vibes.\n\n";
-                $cuerpo .= "Haz clic o copia este enlace en tu navegador:\n";
-                $cuerpo .= $enlace . "\n\n";
-                $cuerpo .= "Este enlace expira en 1 hora.\n\n";
-                $cuerpo .= "Si no solicitaste este cambio, puedes ignorar este mensaje.\n\n";
-                $cuerpo .= "Saludos,\nRetro Vibes";
 
-                $headers = "From: no-reply@" . $host . "\r\n";
-                $headers .= "Reply-To: no-reply@" . $host . "\r\n";
-                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
-                // ====== ENVIAR CORREO ======
-                @mail($usuario['email'], $asunto, $cuerpo, $headers);
+
+// ====== CONTENIDO DEL CORREO EN HTML ======
+$asunto = 'Recuperación de contraseña - Retro Vibes';
+
+$cuerpo = '
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Recuperación de contraseña</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, Helvetica, sans-serif; color:#222;">
+    <div style="max-width:600px; margin:30px auto; background:#ffffff; border:1px solid #ddd; border-radius:10px; overflow:hidden;">
+        
+        <div style="background:#111; color:#00ffd5; padding:20px; text-align:center;">
+            <h1 style="margin:0; font-size:28px;">Retro Vibes</h1>
+            <p style="margin:8px 0 0 0; color:#ffffff; font-size:14px;">Recuperación de contraseña</p>
+        </div>
+
+        <div style="padding:30px;">
+            <p style="font-size:16px; margin-top:0;">Hola ' . htmlspecialchars($usuario['nombre'], ENT_QUOTES, 'UTF-8') . ',</p>
+
+            <p style="font-size:16px; line-height:1.6;">
+                Recibimos una solicitud para restablecer tu contraseña en <strong>Retro Vibes</strong>.
+            </p>
+
+            <p style="font-size:16px; line-height:1.6;">
+                Haz clic en el siguiente botón para crear una nueva contraseña:
+            </p>
+
+            <p style="text-align:center; margin:30px 0;">
+                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '" 
+                   style="display:inline-block; background:#00c853; color:#ffffff; text-decoration:none; padding:14px 24px; border-radius:8px; font-size:16px; font-weight:bold;">
+                   Restablecer contraseña
+                </a>
+            </p>
+
+            <p style="font-size:14px; color:#555; line-height:1.6;">
+                Este enlace expira en <strong>1 hora</strong>.
+            </p>
+
+            <p style="font-size:14px; color:#555; line-height:1.6;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+            </p>
+
+            <p style="font-size:14px; word-break:break-all;">
+                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '</a>
+            </p>
+
+            <hr style="border:none; border-top:1px solid #ddd; margin:30px 0;">
+
+            <p style="font-size:14px; color:#777; line-height:1.6; margin-bottom:0;">
+                Si no solicitaste este cambio, puedes ignorar este mensaje.
+            </p>
+        </div>
+
+        <div style="background:#f8f8f8; padding:15px; text-align:center; font-size:12px; color:#777;">
+            © Retro Vibes
+        </div>
+    </div>
+</body>
+</html>
+';
+
+$headers = "MIME-Version: 1.0\r\n";
+$headers .= "From: Retro Vibes <no-reply@" . $host . ">\r\n";
+$headers .= "Reply-To: no-reply@" . $host . "\r\n";
+$headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+// ====== ENVIAR CORREO ======
+@mail($usuario['email'], $asunto, $cuerpo, $headers);
+
+
+
+
+
+
+
+
+
             }
 
         } catch (PDOException $e) {
