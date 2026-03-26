@@ -62,23 +62,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->fetch()) {
                 $mensaje = 'Ese correo ya está registrado.';
             } else {
-                // ====== CREAR USUARIO ======
+                // ====== CREAR USUARIO PENDIENTE ======
                 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
                 $stmt = $pdo->prepare("
                     INSERT INTO usuarios (nombre, email, password, role, status, creado_en)
-                    VALUES (?, ?, ?, 'user', 'activo', NOW())
+                    VALUES (?, ?, ?, 'user', 'pendiente', NOW())
                 ");
                 $stmt->execute([$nombre, $email, $passwordHash]);
 
-                // ====== MENSAJE FLASH Y REDIRECCION ======
-                $_SESSION['registro_exitoso'] = 'Usuario registrado correctamente. Ya puedes iniciar sesión.';
+                $usuarioId = (int)$pdo->lastInsertId();
+
+                // ====== INVALIDAR TOKENS ANTERIORES ======
+                $stmt = $pdo->prepare("UPDATE email_verifications SET usado = 1 WHERE usuario_id = ?");
+                $stmt->execute([$usuarioId]);
+
+                // ====== GENERAR TOKEN ======
+                $tokenPlano = bin2hex(random_bytes(32));
+                $tokenHash = hash('sha256', $tokenPlano);
+                $expiraEn = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO email_verifications (usuario_id, token, expira_en, usado)
+                    VALUES (?, ?, ?, 0)
+                ");
+                $stmt->execute([$usuarioId, $tokenHash, $expiraEn]);
+
+                // ====== CREAR ENLACE ======
+                $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'];
+                $rutaBase = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+                $enlace = $protocolo . '://' . $host . $rutaBase . '/verify_email.php?token=' . urlencode($tokenPlano);
+
+                // ====== CORREO HTML ======
+                $asunto = 'Verifica tu correo - Retro Vibes';
+
+                $cuerpo = '
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Verificación de correo</title>
+                </head>
+                <body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, Helvetica, sans-serif; color:#222;">
+                    <div style="max-width:600px; margin:30px auto; background:#ffffff; border:1px solid #ddd; border-radius:10px; overflow:hidden;">
+
+                        <div style="background:#111; color:#00ffd5; padding:20px; text-align:center;">
+                            <h1 style="margin:0; font-size:28px;">Retro Vibes</h1>
+                            <p style="margin:8px 0 0 0; color:#ffffff; font-size:14px;">Verificación de correo</p>
+                        </div>
+
+                        <div style="padding:30px;">
+                            <p style="font-size:16px; margin-top:0;">Hola ' . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . ',</p>
+
+                            <p style="font-size:16px; line-height:1.6;">
+                                Gracias por registrarte en <strong>Retro Vibes</strong>.
+                            </p>
+
+                            <p style="font-size:16px; line-height:1.6;">
+                                Para activar tu cuenta, haz clic en el siguiente botón:
+                            </p>
+
+                            <p style="text-align:center; margin:30px 0;">
+                                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '"
+                                   style="display:inline-block; background:#00c853; color:#ffffff; text-decoration:none; padding:14px 24px; border-radius:8px; font-size:16px; font-weight:bold;">
+                                   Verificar correo
+                                </a>
+                            </p>
+
+                            <p style="font-size:14px; color:#555; line-height:1.6;">
+                                Este enlace expira en <strong>24 horas</strong>.
+                            </p>
+
+                            <p style="font-size:14px; color:#555; line-height:1.6;">
+                                Si el botón no funciona, copia y pega este enlace en tu navegador:
+                            </p>
+
+                            <p style="font-size:14px; word-break:break-all;">
+                                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '</a>
+                            </p>
+
+                            <hr style="border:none; border-top:1px solid #ddd; margin:30px 0;">
+
+                            <p style="font-size:14px; color:#777; line-height:1.6; margin-bottom:0;">
+                                Si no realizaste este registro, puedes ignorar este mensaje.
+                            </p>
+                        </div>
+
+                        <div style="background:#f8f8f8; padding:15px; text-align:center; font-size:12px; color:#777;">
+                            © Retro Vibes
+                        </div>
+                    </div>
+                </body>
+                </html>
+                ';
+
+                $headers = "MIME-Version: 1.0\r\n";
+                $headers .= "From: Retro Vibes <no-reply@" . $host . ">\r\n";
+                $headers .= "Reply-To: no-reply@" . $host . "\r\n";
+                $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+                @mail($email, $asunto, $cuerpo, $headers);
+
+                $_SESSION['registro_exitoso'] = 'Registro exitoso. Revisa tu correo para verificar tu cuenta antes de iniciar sesión.';
                 header("Location: login.php");
                 exit;
             }
 
         } catch (PDOException $e) {
-            // 23000 = violación de restricción UNIQUE
             if ($e->getCode() == 23000) {
                 $mensaje = 'Ese correo ya está registrado.';
             } else {

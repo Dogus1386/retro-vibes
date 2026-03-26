@@ -13,6 +13,40 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 /* =========================
+   ESTADISTICAS
+========================= */
+$stmtTotalUsuarios = $pdo->query("SELECT COUNT(*) FROM usuarios");
+$totalUsuarios = (int)$stmtTotalUsuarios->fetchColumn();
+
+$stmtTotalComentarios = $pdo->query("SELECT COUNT(*) FROM comments");
+$totalComentarios = (int)$stmtTotalComentarios->fetchColumn();
+
+$stmtTotalLikes = $pdo->query("SELECT COUNT(*) FROM comment_likes");
+$totalLikes = (int)$stmtTotalLikes->fetchColumn();
+
+/* =========================
+   ULTIMOS REGISTROS
+========================= */
+$stmtUltimosUsuarios = $pdo->query("
+    SELECT id, nombre, email, role, status, creado_en
+    FROM usuarios
+    ORDER BY id DESC
+    LIMIT 5
+");
+$ultimosUsuarios = $stmtUltimosUsuarios->fetchAll(PDO::FETCH_ASSOC);
+
+/* =========================
+   ULTIMOS COMENTARIOS
+========================= */
+$stmtUltimosComentarios = $pdo->query("
+    SELECT id, post_slug, author_name, comment_text, created_at, status
+    FROM comments
+    ORDER BY id DESC
+    LIMIT 5
+");
+$ultimosComentarios = $stmtUltimosComentarios->fetchAll(PDO::FETCH_ASSOC);
+
+/* =========================
    COMENTARIOS
 ========================= */
 $stmtComments = $pdo->query("
@@ -26,7 +60,7 @@ $comments = $stmtComments->fetchAll(PDO::FETCH_ASSOC);
    USUARIOS
 ========================= */
 $stmtUsers = $pdo->query("
-    SELECT id, nombre, email, role, status
+    SELECT id, nombre, email, role, status, creado_en
     FROM usuarios
     ORDER BY id DESC
 ");
@@ -37,6 +71,7 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Admin | Retro Vibes</title>
     <style>
         body {
@@ -44,6 +79,12 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
             background: #0f0f0f;
             color: #ffffff;
             padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         h1 {
@@ -58,7 +99,7 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
         }
 
         .top-links {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .top-links a {
@@ -72,11 +113,47 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
             text-decoration: underline;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #1a1a1a, #111);
+            border: 1px solid #2d2d2d;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #ff9800;
+        }
+
+        .stat-number {
+            font-size: 40px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .panel-box {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             background: #1a1a1a;
-            margin-bottom: 40px;
+            margin-bottom: 10px;
         }
 
         th, td {
@@ -252,9 +329,39 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
             color: #ff9800;
             font-weight: bold;
         }
+
+        .comment-preview {
+            max-width: 350px;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .section-note {
+            color: #bbbbbb;
+            font-size: 14px;
+            margin-top: -5px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
+            th, td {
+                font-size: 13px;
+                padding: 10px;
+            }
+
+            .stat-number {
+                font-size: 32px;
+            }
+        }
     </style>
 </head>
 <body>
+
+<div class="container">
 
     <h1>Panel de Administración - Retro Vibes</h1>
 
@@ -263,144 +370,249 @@ $usuarios = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
         <a href="logout.php">Cerrar sesión</a>
     </div>
 
-    <h2>Moderación de comentarios</h2>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total usuarios</h3>
+            <div class="stat-number"><?php echo $totalUsuarios; ?></div>
+        </div>
 
-    <?php if (count($comments) > 0): ?>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Post</th>
-                <th>Autor</th>
-                <th>Comentario</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Acción</th>
-            </tr>
+        <div class="stat-card">
+            <h3>Total comentarios</h3>
+            <div class="stat-number"><?php echo $totalComentarios; ?></div>
+        </div>
 
-            <?php foreach ($comments as $comment): ?>
+        <div class="stat-card">
+            <h3>Total likes</h3>
+            <div class="stat-number"><?php echo $totalLikes; ?></div>
+        </div>
+    </div>
+
+    <div class="panel-box">
+        <h2>Últimos registros</h2>
+
+        <?php if (count($ultimosUsuarios) > 0): ?>
+            <table>
                 <tr>
-                    <td><?php echo htmlspecialchars($comment['id']); ?></td>
-                    <td><?php echo htmlspecialchars($comment['post_slug']); ?></td>
-                    <td><?php echo htmlspecialchars($comment['author_name']); ?></td>
-                    <td><?php echo nl2br(htmlspecialchars($comment['comment_text'])); ?></td>
-                    <td><?php echo htmlspecialchars($comment['created_at']); ?></td>
-                    <td>
-                        <?php if (($comment['status'] ?? 'visible') === 'oculto'): ?>
-                            <span class="badge-oculto">oculto</span>
-                        <?php else: ?>
-                            <span class="badge-visible">visible</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if (($comment['status'] ?? 'visible') === 'visible'): ?>
-                            <a class="btn-comment-hide"
-                               href="update-comment-status.php?id=<?php echo $comment['id']; ?>&status=oculto"
-                               onclick="return confirm('¿Ocultar este comentario?');">
-                               Ocultar
-                            </a>
-                        <?php else: ?>
-                            <a class="btn-comment-show"
-                               href="update-comment-status.php?id=<?php echo $comment['id']; ?>&status=visible"
-                               onclick="return confirm('¿Mostrar este comentario nuevamente?');">
-                               Mostrar
-                            </a>
-                        <?php endif; ?>
-
-                        <br>
-
-                        <a class="btn-delete"
-                           href="delete-comment.php?id=<?php echo $comment['id']; ?>"
-                           onclick="return confirm('¿Seguro que deseas eliminar este comentario?');">
-                           Eliminar
-                        </a>
-                    </td>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
                 </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php else: ?>
-        <p>No hay comentarios registrados.</p>
-    <?php endif; ?>
 
-    <h2>Gestión de usuarios</h2>
+                <?php foreach ($ultimosUsuarios as $usuario): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($usuario['id']); ?></td>
+                        <td><?php echo htmlspecialchars($usuario['nombre']); ?></td>
+                        <td><?php echo htmlspecialchars($usuario['email']); ?></td>
+                        <td>
+                            <?php if ($usuario['role'] === 'admin'): ?>
+                                <span class="badge-admin">admin</span>
+                            <?php else: ?>
+                                <span class="badge-user">user</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($usuario['status'] === 'bloqueado'): ?>
+                                <span class="badge-bloqueado">bloqueado</span>
+                            <?php else: ?>
+                                <span class="badge-activo">activo</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo htmlspecialchars($usuario['creado_en'] ?? ''); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p>No hay registros todavía.</p>
+        <?php endif; ?>
+    </div>
 
-    <?php if (count($usuarios) > 0): ?>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Acción</th>
-            </tr>
+    <div class="panel-box">
+        <h2>Últimos comentarios</h2>
 
-            <?php foreach ($usuarios as $usuario): ?>
+        <?php if (count($ultimosComentarios) > 0): ?>
+            <table>
                 <tr>
-                    <td><?php echo htmlspecialchars($usuario['id']); ?></td>
-                    <td>
-                        <?php echo htmlspecialchars($usuario['nombre']); ?>
-                        <?php if ((int)$usuario['id'] === (int)$_SESSION['user_id']): ?>
-                            <span class="self-label">(Tú)</span>
-                        <?php endif; ?>
-                    </td>
-                    <td><?php echo htmlspecialchars($usuario['email']); ?></td>
-                    <td>
-                        <?php if ($usuario['role'] === 'admin'): ?>
-                            <span class="badge-admin">admin</span>
-                        <?php else: ?>
-                            <span class="badge-user">user</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if ($usuario['status'] === 'bloqueado'): ?>
-                            <span class="badge-bloqueado">bloqueado</span>
-                        <?php else: ?>
-                            <span class="badge-activo">activo</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if ((int)$usuario['id'] !== (int)$_SESSION['user_id']): ?>
+                    <th>ID</th>
+                    <th>Post</th>
+                    <th>Autor</th>
+                    <th>Comentario</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                </tr>
 
-                            <?php if ($usuario['role'] === 'user'): ?>
-                                <a class="btn-role"
-                                   href="update-role.php?id=<?php echo $usuario['id']; ?>&role=admin"
-                                   onclick="return confirm('¿Convertir este usuario en admin?');">
-                                   Hacer admin
+                <?php foreach ($ultimosComentarios as $comment): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($comment['id']); ?></td>
+                        <td><?php echo htmlspecialchars($comment['post_slug']); ?></td>
+                        <td><?php echo htmlspecialchars($comment['author_name']); ?></td>
+                        <td class="comment-preview"><?php echo nl2br(htmlspecialchars($comment['comment_text'])); ?></td>
+                        <td><?php echo htmlspecialchars($comment['created_at']); ?></td>
+                        <td>
+                            <?php if (($comment['status'] ?? 'visible') === 'oculto'): ?>
+                                <span class="badge-oculto">oculto</span>
+                            <?php else: ?>
+                                <span class="badge-visible">visible</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p>No hay comentarios todavía.</p>
+        <?php endif; ?>
+    </div>
+
+    <div class="panel-box">
+        <h2>Moderación de comentarios</h2>
+        <p class="section-note">Aquí puedes ocultar, mostrar o eliminar comentarios.</p>
+
+        <?php if (count($comments) > 0): ?>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Post</th>
+                    <th>Autor</th>
+                    <th>Comentario</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+
+                <?php foreach ($comments as $comment): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($comment['id']); ?></td>
+                        <td><?php echo htmlspecialchars($comment['post_slug']); ?></td>
+                        <td><?php echo htmlspecialchars($comment['author_name']); ?></td>
+                        <td class="comment-preview"><?php echo nl2br(htmlspecialchars($comment['comment_text'])); ?></td>
+                        <td><?php echo htmlspecialchars($comment['created_at']); ?></td>
+                        <td>
+                            <?php if (($comment['status'] ?? 'visible') === 'oculto'): ?>
+                                <span class="badge-oculto">oculto</span>
+                            <?php else: ?>
+                                <span class="badge-visible">visible</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (($comment['status'] ?? 'visible') === 'visible'): ?>
+                                <a class="btn-comment-hide"
+                                   href="update-comment-status.php?id=<?php echo $comment['id']; ?>&status=oculto"
+                                   onclick="return confirm('¿Ocultar este comentario?');">
+                                   Ocultar
                                 </a>
                             <?php else: ?>
-                                <a class="btn-role"
-                                   href="update-role.php?id=<?php echo $usuario['id']; ?>&role=user"
-                                   onclick="return confirm('¿Quitar permisos de admin a este usuario?');">
-                                   Hacer user
+                                <a class="btn-comment-show"
+                                   href="update-comment-status.php?id=<?php echo $comment['id']; ?>&status=visible"
+                                   onclick="return confirm('¿Mostrar este comentario nuevamente?');">
+                                   Mostrar
                                 </a>
                             <?php endif; ?>
 
                             <br>
 
-                            <?php if ($usuario['status'] === 'activo'): ?>
-                                <a class="btn-status-block"
-                                   href="update-status.php?id=<?php echo $usuario['id']; ?>&status=bloqueado"
-                                   onclick="return confirm('¿Seguro que deseas bloquear este usuario?');">
-                                   Bloquear
-                                </a>
-                            <?php else: ?>
-                                <a class="btn-status-active"
-                                   href="update-status.php?id=<?php echo $usuario['id']; ?>&status=activo"
-                                   onclick="return confirm('¿Deseas activar nuevamente este usuario?');">
-                                   Activar
-                                </a>
-                            <?php endif; ?>
+                            <a class="btn-delete"
+                               href="delete-comment.php?id=<?php echo $comment['id']; ?>"
+                               onclick="return confirm('¿Seguro que deseas eliminar este comentario?');">
+                               Eliminar
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p>No hay comentarios registrados.</p>
+        <?php endif; ?>
+    </div>
 
-                        <?php else: ?>
-                            <span>No disponible</span>
-                        <?php endif; ?>
-                    </td>
+    <div class="panel-box">
+        <h2>Gestión de usuarios</h2>
+        <p class="section-note">Aquí puedes cambiar roles y bloquear o activar usuarios.</p>
+
+        <?php if (count($usuarios) > 0): ?>
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Acción</th>
                 </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php else: ?>
-        <p>No hay usuarios registrados.</p>
-    <?php endif; ?>
+
+                <?php foreach ($usuarios as $usuario): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($usuario['id']); ?></td>
+                        <td>
+                            <?php echo htmlspecialchars($usuario['nombre']); ?>
+                            <?php if ((int)$usuario['id'] === (int)$_SESSION['user_id']): ?>
+                                <span class="self-label">(Tú)</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo htmlspecialchars($usuario['email']); ?></td>
+                        <td>
+                            <?php if ($usuario['role'] === 'admin'): ?>
+                                <span class="badge-admin">admin</span>
+                            <?php else: ?>
+                                <span class="badge-user">user</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($usuario['status'] === 'bloqueado'): ?>
+                                <span class="badge-bloqueado">bloqueado</span>
+                            <?php else: ?>
+                                <span class="badge-activo">activo</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo htmlspecialchars($usuario['creado_en'] ?? ''); ?></td>
+                        <td>
+                            <?php if ((int)$usuario['id'] !== (int)$_SESSION['user_id']): ?>
+
+                                <?php if ($usuario['role'] === 'user'): ?>
+                                    <a class="btn-role"
+                                       href="update-role.php?id=<?php echo $usuario['id']; ?>&role=admin"
+                                       onclick="return confirm('¿Convertir este usuario en admin?');">
+                                       Hacer admin
+                                    </a>
+                                <?php else: ?>
+                                    <a class="btn-role"
+                                       href="update-role.php?id=<?php echo $usuario['id']; ?>&role=user"
+                                       onclick="return confirm('¿Quitar permisos de admin a este usuario?');">
+                                       Hacer user
+                                    </a>
+                                <?php endif; ?>
+
+                                <br>
+
+                                <?php if ($usuario['status'] === 'activo'): ?>
+                                    <a class="btn-status-block"
+                                       href="update-status.php?id=<?php echo $usuario['id']; ?>&status=bloqueado"
+                                       onclick="return confirm('¿Seguro que deseas bloquear este usuario?');">
+                                       Bloquear
+                                    </a>
+                                <?php else: ?>
+                                    <a class="btn-status-active"
+                                       href="update-status.php?id=<?php echo $usuario['id']; ?>&status=activo"
+                                       onclick="return confirm('¿Deseas activar nuevamente este usuario?');">
+                                       Activar
+                                    </a>
+                                <?php endif; ?>
+
+                            <?php else: ?>
+                                <span>No disponible</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p>No hay usuarios registrados.</p>
+        <?php endif; ?>
+    </div>
+
+</div>
 
 </body>
 </html>

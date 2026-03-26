@@ -23,12 +23,17 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// ====== MENSAJE FLASH DE REGISTRO EXITOSO ======
+// ====== MENSAJE FLASH ======
 $mensaje = '';
 
 if (!empty($_SESSION['registro_exitoso'])) {
     $mensaje = $_SESSION['registro_exitoso'];
     unset($_SESSION['registro_exitoso']);
+}
+
+if (!empty($_SESSION['verificacion_exitosa'])) {
+    $mensaje = $_SESSION['verificacion_exitosa'];
+    unset($_SESSION['verificacion_exitosa']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -59,7 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mensaje = 'Tu cuenta ha sido bloqueada.';
                 sleep(1);
 
-            } else {
+            } elseif ($usuario['status'] === 'pendiente') {
+                $mensaje = 'Debes verificar tu correo antes de iniciar sesión.';
+                sleep(1);
+
+            } elseif ($usuario['status'] === 'activo') {
 
                 // ====== REGENERAR SESION ======
                 session_regenerate_id(true);
@@ -72,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 header('Location: index.php');
                 exit;
+            } else {
+                $mensaje = 'Tu cuenta no está disponible para iniciar sesión.';
+                sleep(1);
             }
 
         } else {
