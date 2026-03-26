@@ -38,27 +38,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $mensaje = 'Correo no válido.';
     } else {
-
-        $mensaje = 'Si el correo existe y está activo, se ha enviado un enlace de recuperación. Revisa también spam o correo no deseado.';
+        $mensaje = 'Si el correo existe y la cuenta está pendiente de verificación, se ha reenviado el correo. Revisa tu bandeja de entrada, spam o correo no deseado.';
 
         try {
             $stmt = $pdo->prepare("SELECT id, nombre, email, status FROM usuarios WHERE email = ? LIMIT 1");
             $stmt->execute([$email]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($usuario && $usuario['status'] === 'activo') {
+            if ($usuario && $usuario['status'] === 'pendiente') {
 
-                // ====== INVALIDAR TOKENS ANTERIORES SIN USAR ======
-                $stmt = $pdo->prepare("UPDATE password_resets SET usado = 1 WHERE usuario_id = ? AND usado = 0");
+                // ====== INVALIDAR TOKENS ANTERIORES ======
+                $stmt = $pdo->prepare("UPDATE email_verifications SET usado = 1 WHERE usuario_id = ?");
                 $stmt->execute([$usuario['id']]);
 
-                // ====== GENERAR TOKEN ======
+                // ====== GENERAR NUEVO TOKEN ======
                 $tokenPlano = bin2hex(random_bytes(32));
                 $tokenHash = hash('sha256', $tokenPlano);
-                $expiraEn = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                $expiraEn = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO password_resets (usuario_id, token, expira_en, usado)
+                    INSERT INTO email_verifications (usuario_id, token, expira_en, usado)
                     VALUES (?, ?, ?, 0)
                 ");
                 $stmt->execute([$usuario['id'], $tokenHash, $expiraEn]);
@@ -67,46 +66,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'];
                 $rutaBase = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-                $enlace = $protocolo . '://' . $host . $rutaBase . '/reset_password.php?token=' . urlencode($tokenPlano);
+                $enlace = $protocolo . '://' . $host . $rutaBase . '/verify_email.php?token=' . urlencode($tokenPlano);
 
-                // ====== CONTENIDO DEL CORREO EN HTML ======
-                $asunto = 'Recuperación de contraseña - Retro Vibes';
+                // ====== CORREO HTML ======
+                $asunto = 'Reenvío de verificación - Retro Vibes';
 
                 $cuerpo = '
                 <!DOCTYPE html>
                 <html lang="es">
                 <head>
                     <meta charset="UTF-8">
-                    <title>Recuperación de contraseña</title>
+                    <title>Verificación de correo</title>
                 </head>
                 <body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, Helvetica, sans-serif; color:#222;">
                     <div style="max-width:600px; margin:30px auto; background:#ffffff; border:1px solid #ddd; border-radius:10px; overflow:hidden;">
-                        
+
                         <div style="background:#111; color:#00ffd5; padding:20px; text-align:center;">
                             <h1 style="margin:0; font-size:28px;">Retro Vibes</h1>
-                            <p style="margin:8px 0 0 0; color:#ffffff; font-size:14px;">Recuperación de contraseña</p>
+                            <p style="margin:8px 0 0 0; color:#ffffff; font-size:14px;">Reenvío de verificación</p>
                         </div>
 
                         <div style="padding:30px;">
                             <p style="font-size:16px; margin-top:0;">Hola ' . htmlspecialchars($usuario['nombre'], ENT_QUOTES, 'UTF-8') . ',</p>
 
                             <p style="font-size:16px; line-height:1.6;">
-                                Recibimos una solicitud para restablecer tu contraseña en <strong>Retro Vibes</strong>.
+                                Has solicitado un nuevo correo de verificación para tu cuenta de <strong>Retro Vibes</strong>.
                             </p>
 
                             <p style="font-size:16px; line-height:1.6;">
-                                Haz clic en el siguiente botón para crear una nueva contraseña:
+                                Haz clic en el siguiente botón para activar tu cuenta:
                             </p>
 
                             <p style="text-align:center; margin:30px 0;">
-                                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '" 
+                                <a href="' . htmlspecialchars($enlace, ENT_QUOTES, 'UTF-8') . '"
                                    style="display:inline-block; background:#00c853; color:#ffffff; text-decoration:none; padding:14px 24px; border-radius:8px; font-size:16px; font-weight:bold;">
-                                   Restablecer contraseña
+                                   Verificar correo
                                 </a>
                             </p>
 
                             <p style="font-size:14px; color:#555; line-height:1.6;">
-                                Este enlace expira en <strong>1 hora</strong>.
+                                Este enlace expira en <strong>24 horas</strong>.
                             </p>
 
                             <p style="font-size:14px; color:#555; line-height:1.6;">
@@ -124,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <hr style="border:none; border-top:1px solid #ddd; margin:30px 0;">
 
                             <p style="font-size:14px; color:#777; line-height:1.6; margin-bottom:0;">
-                                Si no solicitaste este cambio, puedes ignorar este mensaje.
+                                Si no solicitaste este reenvío, puedes ignorar este mensaje.
                             </p>
                         </div>
 
@@ -150,12 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>Reenviar verificación | Retro Vibes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperar contraseña | Retro Vibes</title>
     <style>
         * { box-sizing: border-box; }
 
@@ -164,9 +164,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             min-height: 100vh;
             font-family: Arial, Helvetica, sans-serif;
             background:
-                radial-gradient(circle at top, rgba(0,255,213,0.16), transparent 25%),
-                radial-gradient(circle at bottom, rgba(255,152,0,0.12), transparent 25%),
-                linear-gradient(180deg, #070b14 0%, #0f172a 100%);
+                radial-gradient(circle at top, rgba(0,255,213,0.15), transparent 30%),
+                linear-gradient(180deg, #0b0f1a 0%, #111827 100%);
             color: #fff;
             display: flex;
             align-items: center;
@@ -174,123 +173,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 20px;
         }
 
-        .wrap {
+        .card {
             width: 100%;
-            max-width: 1040px;
-            display: grid;
-            grid-template-columns: 1.05fr 0.95fr;
-            background: rgba(8, 12, 22, 0.92);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 22px;
-            overflow: hidden;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.45);
+            max-width: 460px;
+            background: rgba(10, 15, 25, 0.95);
+            border: 1px solid rgba(0,255,213,0.18);
+            border-radius: 18px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+            padding: 32px;
         }
 
-        .hero {
-            padding: 48px;
-            background:
-                linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.35)),
-                linear-gradient(135deg, #111827, #0b1020);
-            position: relative;
-        }
-
-        .hero::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(transparent 96%, rgba(255,255,255,0.05) 100%),
-                linear-gradient(90deg, transparent 96%, rgba(255,255,255,0.05) 100%);
-            background-size: 36px 36px;
-            pointer-events: none;
-        }
-
-        .brand {
-            position: relative;
-            z-index: 1;
-        }
-
-        .brand h1 {
-            margin: 0;
-            font-size: 42px;
+        h1 {
+            margin: 0 0 10px 0;
             color: #00ffd5;
-            text-shadow: 0 0 14px rgba(0,255,213,0.3);
+            text-align: center;
         }
 
-        .brand p {
-            color: #cdd6df;
-            margin-top: 12px;
-            line-height: 1.7;
-            max-width: 420px;
-        }
-
-        .features {
-            position: relative;
-            z-index: 1;
-            margin-top: 30px;
-            display: grid;
-            gap: 14px;
-        }
-
-        .feature {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 14px;
-            padding: 14px 16px;
-            color: #dbe4ee;
-        }
-
-        .panel {
-            padding: 42px 34px;
-            background: rgba(6, 10, 18, 0.96);
-        }
-
-        .panel h2 {
-            margin-top: 0;
-            margin-bottom: 8px;
-            color: #fff;
-            font-size: 30px;
-        }
-
-        .panel .sub {
-            margin-top: 0;
-            margin-bottom: 24px;
-            color: #a8b3c2;
+        .sub {
+            text-align: center;
+            color: #b8c1cc;
+            margin-bottom: 25px;
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
         .mensaje {
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.08);
-            color: #f5f7fa;
-            padding: 14px;
-            border-radius: 12px;
+            color: #f4f4f4;
+            padding: 12px;
+            border-radius: 10px;
             margin-bottom: 18px;
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
         label {
             display: block;
             margin-bottom: 8px;
+            color: #dbe4ee;
             font-weight: bold;
-            color: #dfe8f2;
-        }
-
-        .campo {
-            margin-bottom: 18px;
         }
 
         input {
             width: 100%;
-            padding: 14px 15px;
-            border-radius: 12px;
-            border: 1px solid #273449;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #2b3a4a;
             background: #0f172a;
             color: #fff;
+            margin-bottom: 18px;
             outline: none;
-            font-size: 14px;
         }
 
         input:focus {
@@ -301,24 +234,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button {
             width: 100%;
             border: none;
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 10px;
+            padding: 14px;
             background: linear-gradient(90deg, #00c853, #00ffd5);
-            color: #051018;
+            color: #081018;
             font-weight: bold;
-            font-size: 15px;
             cursor: pointer;
-            margin-top: 4px;
+            font-size: 15px;
         }
 
         button:hover {
-            opacity: 0.96;
+            opacity: 0.95;
         }
 
         .links {
             margin-top: 18px;
-            display: grid;
-            gap: 10px;
             text-align: center;
             font-size: 14px;
         }
@@ -331,77 +261,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .links a:hover {
             text-decoration: underline;
         }
-
-        .hint {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #8894a5;
-            line-height: 1.6;
-        }
-
-        @media (max-width: 900px) {
-            .wrap {
-                grid-template-columns: 1fr;
-            }
-
-            .hero {
-                padding: 30px 24px;
-            }
-
-            .brand h1 {
-                font-size: 34px;
-            }
-
-            .panel {
-                padding: 30px 22px;
-            }
-        }
     </style>
 </head>
 <body>
 
-    <div class="wrap">
-        <div class="hero">
-            <div class="brand">
-                <h1>Retro Vibes</h1>
-                <p>¿Olvidaste tu contraseña? No pasa nada. Solicita un enlace seguro para crear una nueva y volver a tu aventura retro.</p>
-            </div>
+    <div class="card">
+        <h1>Reenviar verificación</h1>
+        <p class="sub">Ingresa tu correo para recibir un nuevo enlace de verificación. Revisa también spam o correo no deseado.</p>
 
-            <div class="features">
-                <div class="feature">🔐 Enlace seguro de recuperación</div>
-                <div class="feature">⏱️ Expira en 1 hora</div>
-                <div class="feature">📬 Revisa spam o correo no deseado si no lo ves</div>
-            </div>
-        </div>
+        <?php if ($mensaje): ?>
+            <div class="mensaje"><?php echo htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
 
-        <div class="panel">
-            <h2>Recuperar contraseña</h2>
-            <p class="sub">Ingresa tu correo para recibir un enlace de recuperación.</p>
+        <form method="POST" action="">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
 
-            <?php if ($mensaje): ?>
-                <div class="mensaje"><?php echo htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8'); ?></div>
-            <?php endif; ?>
+            <label for="email">Correo</label>
+            <input type="email" id="email" name="email" maxlength="100" required>
 
-            <form method="POST" action="">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+            <button type="submit">Reenviar correo</button>
+        </form>
 
-                <div class="campo">
-                    <label for="email">Correo</label>
-                    <input type="email" id="email" name="email" maxlength="100" required>
-                </div>
-
-                <button type="submit">Enviar enlace de recuperación</button>
-            </form>
-
-            <div class="links">
-                <a href="login.php">Volver al login</a>
-                <a href="resend_verification.php">Reenviar correo de verificación</a>
-            </div>
-
-            <div class="hint">
-                Si la cuenta existe y está activa, recibirás un correo. Revisa también spam o correo no deseado.
-            </div>
+        <div class="links">
+            <a href="login.php">Volver al login</a>
         </div>
     </div>
 
