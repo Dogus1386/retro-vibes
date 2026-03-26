@@ -1,34 +1,35 @@
 <?php
 session_start();
 require_once "db.php";
-require_once 'auth.php';
+require 'auth.php';
 
-$postSlug = "mario";
+$post_slug = "mario";
 
 /* GUARDAR COMENTARIO */
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_SESSION["user_id"])) {
-  if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["comment_text"])) {
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: login.php");
+        exit;
+    }
 
-if (isset($_SESSION['status']) && $_SESSION['status'] === 'bloqueado') {
-    die('Tu cuenta está bloqueada y no puedes comentar.');
-}
-    $commentText = trim($_POST["comment_text"] ?? "");
-    $authorName = $_SESSION["user_nombre"];
-    $usuarioId = $_SESSION["user_id"];
+    if (isset($_SESSION['status']) && $_SESSION['status'] === 'bloqueado') {
+        die('Tu cuenta está bloqueada y no puedes comentar.');
+    }
 
-    if ($commentText !== "") {
-        if (mb_strlen($commentText) > 500) {
+    $comment_text = trim($_POST["comment_text"] ?? "");
+    $author_name = $_SESSION["user_nombre"] ?? "";
+    $usuario_id = $_SESSION["user_id"] ?? 0;
+
+    if ($comment_text !== "") {
+        if (mb_strlen($comment_text) > 500) {
             die("El comentario no puede superar los 500 caracteres.");
         }
 
         $stmt = $pdo->prepare("
-            INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id)
-            VALUES (?, ?, ?, NOW(), ?)
+            INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id, status)
+            VALUES (?, ?, ?, NOW(), ?, 'visible')
         ");
-        $stmt->execute([$postSlug, $authorName, $commentText, $usuarioId]);
+        $stmt->execute([$post_slug, $author_name, $comment_text, $usuario_id]);
 
         header("Location: post-mario.php");
         exit;
@@ -36,13 +37,26 @@ if (isset($_SESSION['status']) && $_SESSION['status'] === 'bloqueado') {
 }
 
 /* CARGAR COMENTARIOS SOLO DE MARIO */
+$usuarioIdActual = $_SESSION['user_id'] ?? 0;
+
 $stmt = $pdo->prepare("
-    SELECT author_name, comment_text, created_at
-    FROM comments
-    WHERE post_slug = ?
-    ORDER BY id DESC
+    SELECT 
+        c.*,
+        (
+            SELECT COUNT(*) 
+            FROM comment_likes cl 
+            WHERE cl.comment_id = c.id
+        ) AS total_likes,
+        (
+            SELECT COUNT(*) 
+            FROM comment_likes cl2 
+            WHERE cl2.comment_id = c.id AND cl2.usuario_id = ?
+        ) AS usuario_dio_like
+    FROM comments c
+    WHERE c.post_slug = ? AND c.status = 'visible'
+    ORDER BY c.id DESC
 ");
-$stmt->execute([$postSlug]);
+$stmt->execute([$usuarioIdActual, $post_slug]);
 $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -58,6 +72,62 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="assets/css/style.css" />
+
+  <style>
+    .comment-actions {
+      margin-top: 12px;
+    }
+
+    .like-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .like-form {
+      margin: 0;
+    }
+
+    .like-btn {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: #fff;
+      border: 1px solid #475569;
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.25s ease;
+    }
+
+    .like-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.12);
+    }
+
+    .like-btn.liked {
+      background: linear-gradient(135deg, #e11d48, #fb7185);
+      border-color: #fb7185;
+      color: #fff;
+    }
+
+    .like-count {
+      color: #facc15;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .like-login-msg {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    #contador {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #94a3b8;
+    }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -75,6 +145,7 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <?php if (isset($_SESSION['user_nombre'])): ?>
           <span style="margin-left:20px;">👤 <?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+          <a href="perfil.php" style="margin-left:10px;">Mi perfil</a>
           <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
         <?php else: ?>
           <a href="login.php" style="margin-left:20px;">Login</a>
@@ -281,6 +352,27 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <p><?php echo nl2br(htmlspecialchars($comment["comment_text"])); ?></p>
+
+                <div class="comment-actions">
+                  <div class="like-section">
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                      <form action="toggle_like.php" method="POST" class="like-form">
+                        <input type="hidden" name="comment_id" value="<?php echo (int)$comment['id']; ?>">
+                        <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+
+                        <button type="submit" class="like-btn <?php echo ((int)$comment['usuario_dio_like'] > 0) ? 'liked' : ''; ?>">
+                          <?php echo ((int)$comment['usuario_dio_like'] > 0) ? '❤️ Te gusta' : '🤍 Me gusta'; ?>
+                        </button>
+                      </form>
+                    <?php else: ?>
+                      <div class="like-login-msg">Inicia sesión para dar like</div>
+                    <?php endif; ?>
+
+                    <div class="like-count">
+                      <?php echo (int)$comment['total_likes']; ?> like<?php echo ((int)$comment['total_likes'] !== 1) ? 's' : ''; ?>
+                    </div>
+                  </div>
+                </div>
               </div>
             <?php endforeach; ?>
           <?php else: ?>
@@ -298,5 +390,19 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
   </footer>
 
   <script src="assets/js/app.js"></script>
+
+  <script>
+    const commentText = document.getElementById('commentText');
+    const contador = document.getElementById('contador');
+
+    if (commentText && contador) {
+      const actualizarContador = () => {
+        contador.textContent = commentText.value.length + ' / 500';
+      };
+
+      commentText.addEventListener('input', actualizarContador);
+      actualizarContador();
+    }
+  </script>
 </body>
 </html>

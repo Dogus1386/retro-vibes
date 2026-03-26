@@ -163,6 +163,36 @@ require_once 'auth.php';
 
         <a href="post-streetfighter.php" class="read-more">Leer artículo →</a>
       </article>
+
+
+
+            <article class="post-card">
+        <span class="post-category">Zelda</span>
+
+        <div class="post-meta">
+          <span>Nintendo</span>
+          <span>•</span>
+          <span>6 min de lectura</span>
+        </div>
+
+        <h3>The Legend of Zelda y la aventura eterna</h3>
+
+        <p class="post-excerpt">
+          Cuando perder una pelea significaba pedir revancha, seguir intentando
+          y convertir cada combate en una historia digna de recordar.
+        </p>
+
+        <a href="post-zelda.php" class="read-more">Leer artículo →</a>
+      </article>
+
+
+
+
+
+
+
+
+
     </div>
   </div>
 </section>

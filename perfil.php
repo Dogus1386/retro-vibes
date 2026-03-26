@@ -8,6 +8,30 @@ $mensajePerfil = '';
 $mensajePassword = '';
 $errorPerfil = '';
 $errorPassword = '';
+$mensajeComentario = '';
+$tipoMensajeComentario = '';
+
+/* ======================
+   MENSAJES DE COMENTARIOS
+====================== */
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'comentario_eliminado') {
+        $mensajeComentario = 'Comentario eliminado correctamente.';
+        $tipoMensajeComentario = 'ok';
+    } elseif ($_GET['msg'] === 'error_eliminar') {
+        $mensajeComentario = 'No se pudo eliminar el comentario.';
+        $tipoMensajeComentario = 'error';
+    } elseif ($_GET['msg'] === 'no_autorizado') {
+        $mensajeComentario = 'No tienes permiso para realizar esa acción.';
+        $tipoMensajeComentario = 'error';
+    } elseif ($_GET['msg'] === 'comentario_editado') {
+        $mensajeComentario = 'Comentario actualizado correctamente.';
+        $tipoMensajeComentario = 'ok';
+    } elseif ($_GET['msg'] === 'error_editar') {
+        $mensajeComentario = 'No se pudo actualizar el comentario.';
+        $tipoMensajeComentario = 'error';
+    }
+}
 
 /* ======================
    PROCESAR ACTUALIZAR NOMBRE
@@ -22,19 +46,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_nombre']))
     } elseif (mb_strlen($nuevoNombre) > 100) {
         $errorPerfil = 'El nombre no puede superar los 100 caracteres.';
     } else {
-$stmtUpdate = $pdo->prepare("UPDATE usuarios SET nombre = ? WHERE id = ?");
-$stmtUpdate->execute([$nuevoNombre, $userId]);
+        $stmtUpdate = $pdo->prepare("UPDATE usuarios SET nombre = ? WHERE id = ?");
+        $stmtUpdate->execute([$nuevoNombre, $userId]);
 
-/* actualizar nombre en comentarios */
-$stmtUpdateComentarios = $pdo->prepare("
-    UPDATE comments 
-    SET author_name = ?
-    WHERE usuario_id = ?
-");
-$stmtUpdateComentarios->execute([$nuevoNombre, $userId]);
+        /* actualizar nombre en comentarios */
+        $stmtUpdateComentarios = $pdo->prepare("
+            UPDATE comments 
+            SET author_name = ?
+            WHERE usuario_id = ?
+        ");
+        $stmtUpdateComentarios->execute([$nuevoNombre, $userId]);
 
-$_SESSION['user_nombre'] = $nuevoNombre;
-$mensajePerfil = 'Nombre actualizado correctamente.';
+        $_SESSION['user_nombre'] = $nuevoNombre;
+        $mensajePerfil = 'Nombre actualizado correctamente.';
     }
 }
 
@@ -83,7 +107,7 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
    OBTENER COMENTARIOS
 ====================== */
 $stmtComentarios = $pdo->prepare("
-    SELECT post_slug, comment_text, created_at, status
+    SELECT id, post_slug, comment_text, created_at, status
     FROM comments
     WHERE usuario_id = ?
     ORDER BY created_at DESC
@@ -190,7 +214,8 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
             margin-bottom: 18px;
         }
 
-        .form-input {
+        .form-input,
+        .form-textarea {
             width: 100%;
             padding: 14px 16px;
             border-radius: 12px;
@@ -202,9 +227,15 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
             transition: 0.2s ease;
         }
 
-        .form-input:focus {
+        .form-input:focus,
+        .form-textarea:focus {
             border-color: #22d3ee;
             box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
         }
 
         .btn {
@@ -255,6 +286,29 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
 
         .btn-logout:hover {
             background: #1e293b;
+        }
+
+        .btn-eliminar {
+            background: #dc2626;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 13px;
+        }
+
+        .btn-eliminar:hover {
+            background: #b91c1c;
+        }
+
+        .btn-editar {
+            background: #2563eb;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .btn-editar:hover {
+            background: #1d4ed8;
         }
 
         .acciones {
@@ -340,6 +394,15 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
             color: #f8fafc;
             line-height: 1.7;
             font-size: 15px;
+            margin-bottom: 14px;
+        }
+
+        .comentario-acciones {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
         }
 
         .sin-comentarios {
@@ -380,6 +443,17 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
 
             .card h2 {
                 font-size: 12px;
+            }
+
+            .comentario-acciones {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-editar,
+            .btn-eliminar {
+                width: 100%;
+                text-align: center;
             }
         }
     </style>
@@ -422,7 +496,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
 
-            <!-- EDITAR NOMBRE Y PASSWORD -->
+            <!-- EDITAR PERFIL -->
             <div class="card">
                 <h2>EDITAR PERFIL</h2>
 
@@ -511,6 +585,12 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
             <div class="card">
                 <h2>MIS COMENTARIOS</h2>
 
+                <?php if ($mensajeComentario): ?>
+                    <div class="<?php echo $tipoMensajeComentario === 'ok' ? 'mensaje-ok' : 'mensaje-error'; ?>">
+                        <?php echo htmlspecialchars($mensajeComentario); ?>
+                    </div>
+                <?php endif; ?>
+
                 <?php if ($comentarios): ?>
                     <?php foreach ($comentarios as $c): ?>
                         <div class="comentario">
@@ -528,6 +608,17 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
 
                             <div class="texto-comentario">
                                 <?php echo nl2br(htmlspecialchars($c['comment_text'])); ?>
+                            </div>
+
+                            <div class="comentario-acciones">
+                                <a href="editar_comentario.php?id=<?php echo (int)$c['id']; ?>" class="btn btn-editar">
+                                    Editar comentario
+                                </a>
+
+                                <form method="POST" action="eliminar_comentario.php" onsubmit="return confirm('¿Seguro que deseas eliminar este comentario?');">
+                                    <input type="hidden" name="comentario_id" value="<?php echo (int)$c['id']; ?>">
+                                    <button type="submit" class="btn btn-eliminar">Eliminar comentario</button>
+                                </form>
                             </div>
                         </div>
                     <?php endforeach; ?>
