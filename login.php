@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } else {
             $mensaje = 'Correo o contraseña incorrectos.';
-            sleep(1); // anti fuerza bruta básica
+            sleep(1);
         }
     }
 }
@@ -110,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </form>
 
+<p><a href="forgot_password.php">¿Olvidaste tu contraseña?</a></p>
 <p>¿No tienes cuenta? <a href="registro.php">Regístrate aquí</a></p>
 
 </body>

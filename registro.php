@@ -35,9 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre = trim($_POST['nombre'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
+    $confirmar_password = trim($_POST['confirmar_password'] ?? '');
 
     // ====== VALIDACIONES ======
-    if ($nombre === '' || $email === '' || $password === '') {
+    if ($nombre === '' || $email === '' || $password === '' || $confirmar_password === '') {
         $mensaje = 'Todos los campos son obligatorios.';
     } elseif (mb_strlen($nombre) < 3 || mb_strlen($nombre) > 50) {
         $mensaje = 'El nombre debe tener entre 3 y 50 caracteres.';
@@ -49,6 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensaje = 'El correo es demasiado largo.';
     } elseif (strlen($password) < 6 || strlen($password) > 100) {
         $mensaje = 'La contraseña debe tener entre 6 y 100 caracteres.';
+    } elseif ($password !== $confirmar_password) {
+        $mensaje = 'Las contraseñas no coinciden.';
     } else {
 
         try {
@@ -62,7 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // ====== CREAR USUARIO ======
                 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-                $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)");
+                $stmt = $pdo->prepare("
+                    INSERT INTO usuarios (nombre, email, password, role, status, creado_en)
+                    VALUES (?, ?, ?, 'user', 'activo', NOW())
+                ");
                 $stmt->execute([$nombre, $email, $passwordHash]);
 
                 // ====== MENSAJE FLASH Y REDIRECCION ======
@@ -72,7 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
         } catch (PDOException $e) {
-            $mensaje = 'Ocurrió un error al registrar el usuario.';
+            // 23000 = violación de restricción UNIQUE
+            if ($e->getCode() == 23000) {
+                $mensaje = 'Ese correo ya está registrado.';
+            } else {
+                $mensaje = 'Ocurrió un error al registrar el usuario.';
+            }
         }
     }
 }
@@ -104,8 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Contraseña:</label><br>
         <input type="password" name="password" minlength="6" maxlength="100" required><br><br>
 
+        <label>Confirmar contraseña:</label><br>
+        <input type="password" name="confirmar_password" minlength="6" maxlength="100" required><br><br>
+
         <button type="submit">Registrarme</button>
     </form>
+
+    <p>¿Ya tienes cuenta? <a href="login.php">Inicia sesión aquí</a></p>
 
 </body>
 </html>
