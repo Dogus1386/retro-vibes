@@ -1,11 +1,6 @@
-
-
-
 <?php
-session_start();
+require_once 'security.php';
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="es">
@@ -32,17 +27,19 @@ session_start();
         <a href="index.php">Inicio</a>
         <a href="index.php#iconicos">Juegos Icónicos</a>
         <a href="blog.php">Blog</a>
-        <a href="index.php">Comunidad</a>
+        <a href="index.php#comunidad">Comunidad</a>
 
-        <?php if(isset($_SESSION['user_nombre'])): ?>
-    <span style="margin-left:20px;">👤 <?php echo $_SESSION['user_nombre']; ?></span>
-    <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
-<?php else: ?>
-    <a href="login.php" style="margin-left:20px;">Login</a>
-<?php endif; ?>
+        <?php if (isset($_SESSION['user_nombre'])): ?>
+          <span style="margin-left:20px;">👤 <?php echo escapar($_SESSION['user_nombre']); ?></span>
+          <a href="perfil.php" style="margin-left:10px;">Mi Perfil</a>
+          <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
+        <?php else: ?>
+          <a href="login.php" style="margin-left:20px;">Login</a>
+        <?php endif; ?>
 
-
-
+        <?php if (isset($_SESSION["role"]) && $_SESSION["role"] === "admin"): ?>
+          <a href="admin.php">Panel Admin</a>
+        <?php endif; ?>
       </nav>
     </div>
   </header>
@@ -61,95 +58,107 @@ session_start();
 
     <section class="blog-layout-section">
       <div class="container blog-layout">
-     
 
         <aside class="blog-sidebar">
           <div class="sidebar-box">
             <div class="blog-posts">
-  <article class="post-card blog-post-card">
-    <span class="post-category">Arcade</span>
 
-    <div class="post-meta">
-      <span>Konami</span>
-      <span>•</span>
-      <span>5 min de lectura</span>
-    </div>
+              <article class="post-card blog-post-card">
+                <span class="post-category">Arcade</span>
 
-    <h3>Por qué Contra sigue siendo brutal</h3>
+                <div class="post-meta">
+                  <span>Konami</span>
+                  <span>•</span>
+                  <span>5 min de lectura</span>
+                </div>
 
-    <p class="post-excerpt">
-      Un recorrido por la dificultad, el ritmo frenético y la emoción del
-      cooperativo en uno de los juegos más desafiantes de la era retro.
-    </p>
+                <h3>Por qué Contra sigue siendo brutal</h3>
 
-    <a href="post-contra.php" class="read-more">Leer artículo →</a>
-    
-  
-  </article>
+                <p class="post-excerpt">
+                  Un recorrido por la dificultad, el ritmo frenético y la emoción del
+                  cooperativo en uno de los juegos más desafiantes de la era retro.
+                </p>
 
-  <article class="post-card blog-post-card">
-    <span class="post-category">Nintendo</span>
+                <a href="post-contra.php" class="read-more">Leer artículo →</a>
+              </article>
 
-    <div class="post-meta">
-      <span>Nintendo</span>
-      <span>•</span>
-      <span>4 min de lectura</span>
-    </div>
+              <article class="post-card blog-post-card">
+                <span class="post-category">Nintendo</span>
 
-    <h3>Super Mario Bros y el inicio de una era</h3>
+                <div class="post-meta">
+                  <span>Nintendo</span>
+                  <span>•</span>
+                  <span>4 min de lectura</span>
+                </div>
 
-    <p class="post-excerpt">
-      Cómo una aventura aparentemente simple cambió la historia de los
-      videojuegos y se convirtió en el símbolo de una generación completa.
-    </p>
+                <h3>Super Mario Bros y el inicio de una era</h3>
 
-    <a href="post-mario.php" class="read-more">Leer artículo →</a>
+                <p class="post-excerpt">
+                  Cómo una aventura aparentemente simple cambió la historia de los
+                  videojuegos y se convirtió en el símbolo de una generación completa.
+                </p>
 
-  </article>
+                <a href="post-mario.php" class="read-more">Leer artículo →</a>
+              </article>
 
-  <article class="post-card blog-post-card">
-    <span class="post-category">Fight Games</span>
+              <article class="post-card blog-post-card">
+                <span class="post-category">Fight Games</span>
 
-    <div class="post-meta">
-      <span>Capcom</span>
-      <span>•</span>
-      <span>6 min de lectura</span>
-    </div>
+                <div class="post-meta">
+                  <span>Capcom</span>
+                  <span>•</span>
+                  <span>6 min de lectura</span>
+                </div>
 
-    <h3>Street Fighter II y las retas inolvidables</h3>
+                <h3>Street Fighter II y las retas inolvidables</h3>
 
-    <p class="post-excerpt">
-      Un homenaje a esas tardes de combate, revancha y rivalidad sana
-      frente a la máquina arcade.
-    </p>
+                <p class="post-excerpt">
+                  Un homenaje a esas tardes de combate, revancha y rivalidad sana
+                  frente a la máquina arcade.
+                </p>
 
-    <a href="post-streetfighter.php" class="read-more">Leer artículo →</a>
-    
-  </article>
+                <a href="post-streetfighter.php" class="read-more">Leer artículo →</a>
+              </article>
 
-  <article class="post-card blog-post-card">
-    <span class="post-category">Run and Gun</span>
+              <article class="post-card blog-post-card">
+                <span class="post-category">Adventure</span>
 
-    <div class="post-meta">
-      <span>SNK</span>
-      <span>•</span>
-      <span>5 min de lectura</span>
-    </div>
+                <div class="post-meta">
+                  <span>Nintendo</span>
+                  <span>•</span>
+                  <span>5 min de lectura</span>
+                </div>
 
-    <h3>Metal Slug y el arte del caos bien hecho</h3>
+                <h3>The Legend of Zelda y la aventura eterna</h3>
 
-    <p class="post-excerpt">
-      Explosiones, humor, sprites increíbles y acción sin pausa en una de
-      las sagas más queridas del arcade.
-    </p>
+                <p class="post-excerpt">
+                  Un clásico que convirtió la exploración, los secretos y la aventura
+                  en parte esencial de la experiencia gamer.
+                </p>
 
-    <a href="#" class="read-more">Leer artículo →</a>
-  </article>
-</div>
-     
+                <a href="post-zelda.php" class="read-more">Leer artículo →</a>
+              </article>
 
+              <article class="post-card blog-post-card">
+                <span class="post-category">Run and Gun</span>
 
+                <div class="post-meta">
+                  <span>SNK</span>
+                  <span>•</span>
+                  <span>5 min de lectura</span>
+                </div>
 
+                <h3>Metal Slug y el arte del caos bien hecho</h3>
+
+                <p class="post-excerpt">
+                  Explosiones, humor, sprites increíbles y acción sin pausa en una de
+                  las sagas más queridas del arcade.
+                </p>
+
+                <a href="#" class="read-more">Leer artículo →</a>
+              </article>
+
+            </div>
 
             <h3>Categorías</h3>
             <ul class="sidebar-list">
