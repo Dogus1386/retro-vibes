@@ -1,12 +1,17 @@
 <?php
-session_start();
-require 'db.php';
-require 'auth.php';
+require_once 'auth.php';
+require_once 'db.php';
 
-$userId = $_SESSION['user_id'] ?? 0;
-$comentarioId = intval($_GET['id'] ?? $_POST['comentario_id'] ?? 0);
+$userId = (int)($_SESSION['user_id'] ?? 0);
+$comentarioId = (int)($_GET['id'] ?? $_POST['comentario_id'] ?? 0);
 $error = '';
-$mensaje = '';
+
+/* ======================
+   TOKEN CSRF
+====================== */
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 if ($userId <= 0 || $comentarioId <= 0) {
     header('Location: perfil.php?msg=no_autorizado');
@@ -33,6 +38,11 @@ if (!$comentario) {
    PROCESAR EDICIÓN
 ====================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        die('Solicitud no válida');
+    }
+
     $nuevoTexto = trim($_POST['comment_text'] ?? '');
 
     if ($nuevoTexto === '') {
@@ -268,8 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="subtitulo">Modifica tu comentario y guarda los cambios.</p>
 
             <div class="info-box">
-                <p><strong>Post:</strong> <?php echo htmlspecialchars($comentario['post_slug']); ?></p>
-                <p><strong>Fecha:</strong> <?php echo htmlspecialchars($comentario['created_at']); ?></p>
+                <p><strong>Post:</strong> <?php echo htmlspecialchars($comentario['post_slug'], ENT_QUOTES, 'UTF-8'); ?></p>
+                <p><strong>Fecha:</strong> <?php echo htmlspecialchars($comentario['created_at'], ENT_QUOTES, 'UTF-8'); ?></p>
                 <p>
                     <strong>Estado:</strong>
                     <?php if ($comentario['status'] === 'visible'): ?>
@@ -281,10 +291,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <?php if ($error): ?>
-                <div class="mensaje-error"><?php echo htmlspecialchars($error); ?></div>
+                <div class="mensaje-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
             <?php endif; ?>
 
             <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="comentario_id" value="<?php echo (int)$comentario['id']; ?>">
 
                 <div class="form-group">
@@ -295,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         class="form-textarea"
                         maxlength="500"
                         required
-                    ><?php echo htmlspecialchars($comentario['comment_text']); ?></textarea>
+                    ><?php echo htmlspecialchars($comentario['comment_text'], ENT_QUOTES, 'UTF-8'); ?></textarea>
 
                     <div class="ayuda">
                         Máximo 500 caracteres.

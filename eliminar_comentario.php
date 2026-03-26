@@ -1,25 +1,34 @@
 <?php
-session_start();
-require 'db.php';
-require 'auth.php';
+require_once 'auth.php';
+require_once 'db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: perfil.php');
     exit;
 }
 
-$userId = $_SESSION['user_id'] ?? 0;
-$comentarioId = intval($_POST['comentario_id'] ?? 0);
+/* ======================
+   VALIDAR CSRF
+====================== */
+if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+    die('Solicitud no válida');
+}
+
+$userId = (int)($_SESSION['user_id'] ?? 0);
+$comentarioId = (int)($_POST['comentario_id'] ?? 0);
 
 if ($userId <= 0 || $comentarioId <= 0) {
     header('Location: perfil.php?msg=error_eliminar');
     exit;
 }
 
-/* Verificar que el comentario pertenezca al usuario logueado */
+/* ======================
+   VERIFICAR QUE EL COMENTARIO
+   PERTENEZCA AL USUARIO LOGUEADO
+====================== */
 $stmtVerificar = $pdo->prepare("
-    SELECT id 
-    FROM comments 
+    SELECT id
+    FROM comments
     WHERE id = ? AND usuario_id = ?
 ");
 $stmtVerificar->execute([$comentarioId, $userId]);
@@ -30,15 +39,20 @@ if (!$comentario) {
     exit;
 }
 
-/* Eliminar comentario */
-$stmtEliminar = $pdo->prepare("DELETE FROM comments WHERE id = ? AND usuario_id = ?");
+/* ======================
+   ELIMINAR COMENTARIO
+====================== */
+$stmtEliminar = $pdo->prepare("
+    DELETE FROM comments
+    WHERE id = ? AND usuario_id = ?
+");
 $stmtEliminar->execute([$comentarioId, $userId]);
 
 if ($stmtEliminar->rowCount() > 0) {
     header('Location: perfil.php?msg=comentario_eliminado');
     exit;
-} else {
-    header('Location: perfil.php?msg=error_eliminar');
-    exit;
 }
+
+header('Location: perfil.php?msg=error_eliminar');
+exit;
 ?>

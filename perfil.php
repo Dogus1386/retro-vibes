@@ -1,7 +1,6 @@
 <?php
-session_start();
-require 'db.php';
-require 'auth.php';
+require_once 'auth.php';
+require_once 'db.php';
 
 $userId = $_SESSION['user_id'];
 $mensajePerfil = '';
@@ -10,6 +9,13 @@ $errorPerfil = '';
 $errorPassword = '';
 $mensajeComentario = '';
 $tipoMensajeComentario = '';
+
+/* ======================
+   TOKEN CSRF
+====================== */
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 /* ======================
    MENSAJES DE COMENTARIOS
@@ -37,14 +43,21 @@ if (isset($_GET['msg'])) {
    PROCESAR ACTUALIZAR NOMBRE
 ====================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_nombre'])) {
+
+    if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+        die('Solicitud no válida');
+    }
+
     $nuevoNombre = trim($_POST['nombre'] ?? '');
 
     if ($nuevoNombre === '') {
         $errorPerfil = 'El nombre no puede ir vacío.';
     } elseif (mb_strlen($nuevoNombre) < 3) {
         $errorPerfil = 'El nombre debe tener al menos 3 caracteres.';
-    } elseif (mb_strlen($nuevoNombre) > 100) {
-        $errorPerfil = 'El nombre no puede superar los 100 caracteres.';
+    } elseif (mb_strlen($nuevoNombre) > 50) {
+        $errorPerfil = 'El nombre no puede superar los 50 caracteres.';
+    } elseif (!preg_match('/^[\p{L}\p{N} ]+$/u', $nuevoNombre)) {
+        $errorPerfil = 'El nombre solo puede contener letras, números y espacios.';
     } else {
         $stmtUpdate = $pdo->prepare("UPDATE usuarios SET nombre = ? WHERE id = ?");
         $stmtUpdate->execute([$nuevoNombre, $userId]);
@@ -66,16 +79,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_nombre']))
    PROCESAR CAMBIO DE CONTRASEÑA
 ====================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_password'])) {
-    $passwordActual = trim($_POST['password_actual'] ?? '');
-    $passwordNueva = trim($_POST['password_nueva'] ?? '');
-    $passwordConfirmar = trim($_POST['password_confirmar'] ?? '');
+
+    if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+        die('Solicitud no válida');
+    }
+
+    $passwordActual = $_POST['password_actual'] ?? '';
+    $passwordNueva = $_POST['password_nueva'] ?? '';
+    $passwordConfirmar = $_POST['password_confirmar'] ?? '';
 
     if ($passwordActual === '' || $passwordNueva === '' || $passwordConfirmar === '') {
         $errorPassword = 'Todos los campos de contraseña son obligatorios.';
     } elseif (strlen($passwordNueva) < 6) {
         $errorPassword = 'La nueva contraseña debe tener al menos 6 caracteres.';
+    } elseif (strlen($passwordNueva) > 100) {
+        $errorPassword = 'La nueva contraseña es demasiado larga.';
     } elseif ($passwordNueva !== $passwordConfirmar) {
         $errorPassword = 'La confirmación de la contraseña no coincide.';
+    } elseif ($passwordActual === $passwordNueva) {
+        $errorPassword = 'La nueva contraseña no puede ser igual a la actual.';
     } else {
         $stmtPassword = $pdo->prepare("SELECT password FROM usuarios WHERE id = ?");
         $stmtPassword->execute([$userId]);
@@ -395,6 +417,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
             line-height: 1.7;
             font-size: 15px;
             margin-bottom: 14px;
+            word-break: break-word;
         }
 
         .comentario-acciones {
@@ -472,22 +495,22 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
 
                 <div class="perfil-dato">
                     <span>Nombre</span>
-                    <strong><?php echo htmlspecialchars($usuario['nombre']); ?></strong>
+                    <strong><?php echo htmlspecialchars($usuario['nombre'], ENT_QUOTES, 'UTF-8'); ?></strong>
                 </div>
 
                 <div class="perfil-dato">
                     <span>Correo</span>
-                    <strong><?php echo htmlspecialchars($usuario['email']); ?></strong>
+                    <strong><?php echo htmlspecialchars($usuario['email'], ENT_QUOTES, 'UTF-8'); ?></strong>
                 </div>
 
                 <div class="perfil-dato">
                     <span>Rol</span>
-                    <strong><?php echo htmlspecialchars($usuario['role']); ?></strong>
+                    <strong><?php echo htmlspecialchars($usuario['role'], ENT_QUOTES, 'UTF-8'); ?></strong>
                 </div>
 
                 <div class="perfil-dato">
                     <span>Miembro desde</span>
-                    <strong><?php echo htmlspecialchars($usuario['creado_en']); ?></strong>
+                    <strong><?php echo htmlspecialchars($usuario['creado_en'], ENT_QUOTES, 'UTF-8'); ?></strong>
                 </div>
 
                 <div class="acciones">
@@ -501,14 +524,16 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                 <h2>EDITAR PERFIL</h2>
 
                 <?php if ($mensajePerfil): ?>
-                    <div class="mensaje-ok"><?php echo htmlspecialchars($mensajePerfil); ?></div>
+                    <div class="mensaje-ok"><?php echo htmlspecialchars($mensajePerfil, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
 
                 <?php if ($errorPerfil): ?>
-                    <div class="mensaje-error"><?php echo htmlspecialchars($errorPerfil); ?></div>
+                    <div class="mensaje-error"><?php echo htmlspecialchars($errorPerfil, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
 
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+
                     <div class="form-group">
                         <label for="nombre">Cambiar nombre</label>
                         <input 
@@ -516,8 +541,8 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                             id="nombre" 
                             name="nombre" 
                             class="form-input"
-                            maxlength="100"
-                            value="<?php echo htmlspecialchars($usuario['nombre']); ?>"
+                            maxlength="50"
+                            value="<?php echo htmlspecialchars($usuario['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
                             required
                         >
                     </div>
@@ -530,14 +555,16 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                 <br><br>
 
                 <?php if ($mensajePassword): ?>
-                    <div class="mensaje-ok"><?php echo htmlspecialchars($mensajePassword); ?></div>
+                    <div class="mensaje-ok"><?php echo htmlspecialchars($mensajePassword, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
 
                 <?php if ($errorPassword): ?>
-                    <div class="mensaje-error"><?php echo htmlspecialchars($errorPassword); ?></div>
+                    <div class="mensaje-error"><?php echo htmlspecialchars($errorPassword, ENT_QUOTES, 'UTF-8'); ?></div>
                 <?php endif; ?>
 
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+
                     <div class="form-group">
                         <label for="password_actual">Contraseña actual</label>
                         <input 
@@ -545,6 +572,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                             id="password_actual" 
                             name="password_actual" 
                             class="form-input"
+                            maxlength="100"
                             required
                         >
                     </div>
@@ -556,6 +584,8 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                             id="password_nueva" 
                             name="password_nueva" 
                             class="form-input"
+                            minlength="6"
+                            maxlength="100"
                             required
                         >
                     </div>
@@ -567,6 +597,8 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                             id="password_confirmar" 
                             name="password_confirmar" 
                             class="form-input"
+                            minlength="6"
+                            maxlength="100"
                             required
                         >
                     </div>
@@ -587,7 +619,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
 
                 <?php if ($mensajeComentario): ?>
                     <div class="<?php echo $tipoMensajeComentario === 'ok' ? 'mensaje-ok' : 'mensaje-error'; ?>">
-                        <?php echo htmlspecialchars($mensajeComentario); ?>
+                        <?php echo htmlspecialchars($mensajeComentario, ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -595,8 +627,8 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                     <?php foreach ($comentarios as $c): ?>
                         <div class="comentario">
                             <div class="comentario-top">
-                                <div><strong>Post:</strong> <?php echo htmlspecialchars($c['post_slug']); ?></div>
-                                <div><strong>Fecha:</strong> <?php echo htmlspecialchars($c['created_at']); ?></div>
+                                <div><strong>Post:</strong> <?php echo htmlspecialchars($c['post_slug'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div><strong>Fecha:</strong> <?php echo htmlspecialchars($c['created_at'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <div>
                                     <?php if ($c['status'] === 'visible'): ?>
                                         <span class="estado-visible">Visible</span>
@@ -607,7 +639,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                             </div>
 
                             <div class="texto-comentario">
-                                <?php echo nl2br(htmlspecialchars($c['comment_text'])); ?>
+                                <?php echo nl2br(htmlspecialchars($c['comment_text'], ENT_QUOTES, 'UTF-8')); ?>
                             </div>
 
                             <div class="comentario-acciones">
@@ -616,6 +648,7 @@ $comentarios = $stmtComentarios->fetchAll(PDO::FETCH_ASSOC);
                                 </a>
 
                                 <form method="POST" action="eliminar_comentario.php" onsubmit="return confirm('¿Seguro que deseas eliminar este comentario?');">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="comentario_id" value="<?php echo (int)$c['id']; ?>">
                                     <button type="submit" class="btn btn-eliminar">Eliminar comentario</button>
                                 </form>

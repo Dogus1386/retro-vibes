@@ -1,12 +1,31 @@
 <?php
-session_start();
-require 'db.php';
-require 'auth.php';
+
+// ====== HEADERS DE SEGURIDAD ======
+header("X-Frame-Options: SAMEORIGIN");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+
+require_once 'auth.php';
+require_once 'db.php';
 
 $post_slug = 'contra';
 
-/* GUARDAR COMENTARIO */
+/* ======================
+   TOKEN CSRF
+====================== */
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+/* ======================
+   GUARDAR COMENTARIO
+====================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_text'])) {
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
+        die('Solicitud no válida');
+    }
+
     if (!isset($_SESSION['user_id'])) {
         header("Location: login.php");
         exit;
@@ -17,27 +36,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comment_text'])) {
     }
 
     $comment_text = trim($_POST['comment_text'] ?? '');
-    $author_name = $_SESSION['user_nombre'] ?? '';
-    $usuario_id = $_SESSION['user_id'] ?? 0;
+    $author_name = trim($_SESSION['user_nombre'] ?? '');
+    $usuario_id = (int)($_SESSION['user_id'] ?? 0);
 
-    if ($comment_text !== '') {
-        if (mb_strlen($comment_text) > 500) {
-            die('El comentario no puede superar los 500 caracteres.');
-        }
-
-        $stmt = $pdo->prepare("
-            INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id, status)
-            VALUES (?, ?, ?, NOW(), ?, 'visible')
-        ");
-        $stmt->execute([$post_slug, $author_name, $comment_text, $usuario_id]);
-
-        header("Location: post-contra.php");
-        exit;
+    if ($usuario_id <= 0 || $author_name === '') {
+        die('Sesión no válida.');
     }
+
+    if ($comment_text === '') {
+        die('El comentario no puede ir vacío.');
+    }
+
+    if (mb_strlen($comment_text) > 500) {
+        die('El comentario no puede superar los 500 caracteres.');
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO comments (post_slug, author_name, comment_text, created_at, usuario_id, status)
+        VALUES (?, ?, ?, NOW(), ?, 'visible')
+    ");
+    $stmt->execute([$post_slug, $author_name, $comment_text, $usuario_id]);
+
+    header("Location: post-contra.php");
+    exit;
 }
 
-/* CARGAR COMENTARIOS SOLO DE CONTRA */
-$usuarioIdActual = $_SESSION['user_id'] ?? 0;
+/* ======================
+   CARGAR COMENTARIOS SOLO DE CONTRA
+====================== */
+$usuarioIdActual = (int)($_SESSION['user_id'] ?? 0);
 
 $stmt = $pdo->prepare("
     SELECT 
@@ -143,7 +170,7 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <a href="index.php#comunidad">Comunidad</a>
 
         <?php if (isset($_SESSION['user_nombre'])): ?>
-          <span style="margin-left:20px;">👤 <?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+          <span style="margin-left:20px;">👤 <?php echo htmlspecialchars($_SESSION['user_nombre'], ENT_QUOTES, 'UTF-8'); ?></span>
           <a href="perfil.php" style="margin-left:10px;">Mi perfil</a>
           <a href="logout.php" style="margin-left:10px;">Cerrar sesión</a>
         <?php else: ?>
@@ -313,6 +340,8 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <?php if (isset($_SESSION['user_id'])): ?>
           <form method="POST" action="" class="comment-form">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+
             <div class="form-group">
               <label for="commentText">Tu comentario</label>
               <textarea
@@ -338,23 +367,24 @@ $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <div class="comment-card">
                 <div class="comment-header">
                   <div class="comment-avatar">
-                    <?php echo strtoupper(substr($comment["author_name"], 0, 1)); ?>
+                    <?php echo htmlspecialchars(strtoupper(substr($comment["author_name"], 0, 1)), ENT_QUOTES, 'UTF-8'); ?>
                   </div>
 
                   <div class="comment-meta">
-                    <h4><?php echo htmlspecialchars($comment["author_name"]); ?></h4>
-                    <span><?php echo htmlspecialchars($comment["created_at"]); ?></span>
+                    <h4><?php echo htmlspecialchars($comment["author_name"], ENT_QUOTES, 'UTF-8'); ?></h4>
+                    <span><?php echo htmlspecialchars($comment["created_at"], ENT_QUOTES, 'UTF-8'); ?></span>
                   </div>
                 </div>
 
-                <p><?php echo nl2br(htmlspecialchars($comment["comment_text"])); ?></p>
+                <p><?php echo nl2br(htmlspecialchars($comment["comment_text"], ENT_QUOTES, 'UTF-8')); ?></p>
 
                 <div class="comment-actions">
                   <div class="like-section">
                     <?php if (isset($_SESSION['user_id'])): ?>
                       <form action="toggle_like.php" method="POST" class="like-form">
                         <input type="hidden" name="comment_id" value="<?php echo (int)$comment['id']; ?>">
-                        <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_SERVER['REQUEST_URI']); ?>">
+                        <input type="hidden" name="redirect" value="post-contra.php">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
 
                         <button type="submit" class="like-btn <?php echo ((int)$comment['usuario_dio_like'] > 0) ? 'liked' : ''; ?>">
                           <?php echo ((int)$comment['usuario_dio_like'] > 0) ? '❤️ Te gusta' : '🤍 Me gusta'; ?>
