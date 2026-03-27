@@ -5,7 +5,7 @@ header("X-Frame-Options: SAMEORIGIN");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
 
-require_once 'auth.php';
+require_once 'auth_public.php'; // Carga la sesión si existe, pero no redirige ni bloquea el acceso
 require_once 'db.php';
 
 $post_slug = 'contra';

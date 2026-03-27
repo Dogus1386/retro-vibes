@@ -1,3 +1,5 @@
+
+
 <?php
 
 // ====== HEADERS SEGURIDAD ======
@@ -93,6 +95,8 @@ y mantener viva la pasión por los videojuegos retro.
 <?php if(!isset($_SESSION['user_nombre'])): ?>
 <a href="login.php" class="primary-btn">Entrar al mundo retro</a>
 <?php endif; ?>
+
+
 
 </div>
 </section>

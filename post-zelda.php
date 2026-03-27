@@ -5,7 +5,7 @@ header("X-Frame-Options: SAMEORIGIN");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
 
-require_once "auth.php";
+require_once 'auth_public.php';
 require_once "db.php";
 
 $post_slug = "zelda";
